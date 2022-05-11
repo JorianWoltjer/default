@@ -36,6 +36,16 @@ default apk build click_me -o new.apk -k test.keystore -p j0r1an
 
 <img src="https://user-images.githubusercontent.com/26067369/167902777-01b8de55-e371-48d7-b304-5e031ee2a07c.png" width="800" alt="Screenshot of building APK">
 
+## Installation
+
+```Shell
+git clone https://github.com/JorianWoltjer/default.git
+cd default
+pip install -r requirements.txt
+alias default="python3 /path/to/default/main.py"  # Add to your ~/.bashrc
+default -h
+```
+
 ## Dependencies
 
 ### APK
