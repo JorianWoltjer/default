@@ -54,8 +54,15 @@ def build(ARGS):
     
     success("Alignment successful")
     progress(f"Signing '{aligned_apk}'...")
-    if ARGS.sign_v3:
-        command(['java', '-jar', '/usr/bin/apksigner', 'sign', '-out', signed_apk, '--ks-key-alias', 'apk', '--ks', os.path.expanduser(ARGS.keystore), '--key-pass', f'pass:{ARGS.password}', '--ks-pass', f'pass:{ARGS.password}', '--v2-signing-enabled=true', '--v3-signing-enabled=true', '-v', aligned_apk],
+    if ARGS.version is not None:
+        version_args = []
+        for version in range(1, 4):  # Version 1-3
+            if version == ARGS.version:
+                version_args.append(f'--v{version}-signing-enabled=true')
+            else:
+                version_args.append(f'--v{version}-signing-enabled=false')
+        
+        command(['java', '-jar', '/usr/bin/apksigner', 'sign', '-out', signed_apk, '--ks-key-alias', 'apk', '--ks', os.path.expanduser(ARGS.keystore), '--key-pass', f'pass:{ARGS.password}', '--ks-pass', f'pass:{ARGS.password}', *version_args, '-v', aligned_apk],
                 error_message=f"Failed to sign '{aligned_apk}'")
     else:
         command(['java', '-jar', '/usr/bin/apksigner', 'sign', '-out', signed_apk, '--ks-key-alias', 'apk', '--ks', os.path.expanduser(ARGS.keystore), '--key-pass', f'pass:{ARGS.password}', '--ks-pass', f'pass:{ARGS.password}', '-v', aligned_apk],
@@ -89,5 +96,5 @@ parser_apk_build.add_argument('folder', help='Input APK source folder', type=Pat
 parser_apk_build.add_argument('-k', '--keystore', help='Keystore file location', default="~/apk.keystore")
 parser_apk_build.add_argument('-p', '--password', help='Keystore password', default="password")
 parser_apk_build.add_argument('-o', '--output', help='Output APK file')  # Final output gets copied to output argument
-parser_apk_build.add_argument('-v3', '--sign-v3', help='Sign using v3 APK signatures', action='store_true')
+parser_apk_build.add_argument('-v', '--version', help='Sign using specific APK Signature version', type=int, choices=range(1, 4),  metavar="[1-3]")
 parser_apk_build.set_defaults(func=build)
