@@ -40,22 +40,12 @@ default apk build click_me -o new.apk -k test.keystore -p j0r1an
 
 ### APK
 
-[**apktool**](https://ibotpeaches.github.io/Apktool/) (For decompiling and building an APK):
+* [**apktool**](https://ibotpeaches.github.io/Apktool/) (For decompiling and building an APK):
+* [**apksigner**](https://developer.android.com/studio/command-line/apksigner) (to sign an APK):
+* [**zipalign**](https://developer.android.com/studio/command-line/zipalign) (to align an APK):
 
 ```Shell
-sudo apt-get install apktool
-```
-
-[**apksigner**](https://developer.android.com/studio/command-line/apksigner) (to sign an APK):
-
-```Shell
-sudo apt-get install apksigner
-```
-
-[**zipalign**](https://developer.android.com/studio/command-line/zipalign) (to align an APK):
-
-```Shell
-sudo apt-get install zipalign
+sudo apt-get install apktool apksigner zipalign
 ```
 
 ## TODO:
