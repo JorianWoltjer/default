@@ -22,19 +22,19 @@ default <command> [<action>] [<args>]
 default apk decompile click_me.apk
 ```
 
-[Screenshot of decompiling APK](https://user-images.githubusercontent.com/26067369/167902168-531e4494-14ef-4d09-888f-b431896d728e.png)
+<img src="https://user-images.githubusercontent.com/26067369/167905287-52fe9a11-4d1b-4e9b-9209-7e36eeda1971.png" width="800" alt="Screenshot of decompiling APK">
 
 ```Shell
 default apk create_keystore -o test.keystore --password j0r1an
 ```
 
-[Screenshot of creating keystore](https://user-images.githubusercontent.com/26067369/167902624-14f0c934-5ce1-46fa-b692-9272e8972277.png)
+<img src="https://user-images.githubusercontent.com/26067369/167904317-55940be3-2a56-463a-a4a5-856bb307238c.png" width="800" alt="Screenshot of creating keystore">
 
 ```Shell
 default apk build click_me -o new.apk -k test.keystore -p j0r1an
 ```
 
-[Screenshot of building APK](https://user-images.githubusercontent.com/26067369/167902777-01b8de55-e371-48d7-b304-5e031ee2a07c.png)
+<img src="https://user-images.githubusercontent.com/26067369/167902777-01b8de55-e371-48d7-b304-5e031ee2a07c.png" width="800" alt="Screenshot of building APK">
 
 ## Dependencies
 
