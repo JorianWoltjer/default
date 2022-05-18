@@ -5,6 +5,8 @@ import shlex
 import subprocess
 from colorama import Fore, Style
 
+LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
+
 def progress(message):
     print(f"[{Fore.LIGHTBLUE_EX}~{Style.RESET_ALL}] {message}")
     

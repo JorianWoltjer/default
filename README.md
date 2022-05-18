@@ -50,16 +50,19 @@ default -h
 
 ### APK
 
-* [**apktool**](https://ibotpeaches.github.io/Apktool/) (For decompiling and building an APK):
-* [**apksigner**](https://developer.android.com/studio/command-line/apksigner) (to sign an APK):
-* [**zipalign**](https://developer.android.com/studio/command-line/zipalign) (to align an APK):
+* [**apktool**](https://ibotpeaches.github.io/Apktool/) for decompiling and building an APK
+* [**apksigner**](https://developer.android.com/studio/command-line/apksigner) to sign an APK
+* [**zipalign**](https://developer.android.com/studio/command-line/zipalign) to align an APK
+* [**dex2jar**](https://github.com/pxb1988/dex2jar) to convert a `classes.dex` file to a JAR file
+* [**xamarin-decompress**](https://github.com/NickstaDB/xamarin-decompress) to decompress DLL files (already included in [`/lib`](/lib))
 
 ```Shell
-sudo apt-get install apktool apksigner zipalign
+sudo apt-get install apktool apksigner zipalign  # Install APK tools
+# <Download latest release from https://github.com/pxb1988/dex2jar/releases>
+sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar to PATH
 ```
 
 ## TODO:
 
-* Add java decompiling to `apk`
-* Add `scan` command for scanning things (`nmap`, `masscan`)
-* Add `brute` command for brute-forcing (`ffuf`, `hydra`)
+- [ ] Add `scan` command for scanning things (`nmap`, `masscan`)
+- [ ] Add `brute` command for brute-forcing (`ffuf`, `hydra`)

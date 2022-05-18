@@ -1,14 +1,49 @@
-from main import PathType, progress, error, success, command, ask
+from main import PathType, progress, error, success, command, ask, LIBRARY_DIR
 import os
 
 def decompile(ARGS):
     ARGS.output = os.path.splitext(ARGS.file)[0] if ARGS.output is None else ARGS.output
+    apk_type = "Java/Smali"  # Default
 
+    # Decompile with apktool into smali
     progress(f"Decompiling '{ARGS.file}'...")
     command(['apktool', 'd', '-f', '-r', ARGS.file, '-o', ARGS.output], 
-            error_message=f"Error decompiling '{ARGS.file}'")
+            error_message=f"Failed to decompile '{ARGS.file}'")
     
-    success(f"Successfully decompiled ('{ARGS.file}' -> '{ARGS.output}')")
+    success(f"Decompiled smali ('{ARGS.output}/smali')")
+    
+    # Unzip the apk directly
+    progress(f"Unzipping '{ARGS.file}'...")
+    command(['unzip', '-qo', ARGS.file, '-d', f"{ARGS.output}.zip"],
+            error_message=f"Failed to unzip '{ARGS.file}'")
+    success(f"Unzipped '{ARGS.file}' ('{ARGS.output}.zip')")
+    
+    # Extract java code from smali
+    progress(f"Extracting jar from '{ARGS.output}.zip/classes.dex'...")
+    command(['dex2jar', '-f', f"{ARGS.output}.zip/classes.dex", '-o', f"{ARGS.output}-tmp.jar"],
+            error_message=f"Failed to extract jar from '{ARGS.output}.zip/classes.dex'")
+    command(['unzip', '-qo', f"{ARGS.output}-tmp.jar", '-d', f"{ARGS.output}.jar"],
+            error_message=f"Failed to unzip '{ARGS.output}-tmp.jar'")
+    os.remove(f"{ARGS.output}-tmp.jar")
+    success(f"Extracted jar ('{ARGS.output}.jar')")
+    
+    # Decompile if React Native bundle
+    if os.path.exists(f"{ARGS.output}.zip/assets/index.android.bundle"):
+        apk_type = "React Native"
+        progress(f"Detected React Native, decompiling '{ARGS.output}.zip/assets/index.android.bundle'...")
+        command(["npx", "react-native-decompiler", "-i", f"{ARGS.output}.zip/assets/index.android.bundle", "-o", f"{ARGS.output}.js"], 
+                error_message=f"Failed to decompile '{ARGS.output}.zip/assets/index.android.bundle'")
+        success(f"Decompiled React Native bundle ('{ARGS.output}.js')")
+        
+    # Decompress if C# DLLs
+    if os.path.exists(f"{ARGS.output}.zip/assemblies"):   
+        apk_type = "C#" 
+        progress(f"Detected C#, decompressing '{ARGS.output}.zip/assemblies'...")
+        command(["python3", f"{LIBRARY_DIR}/xamarin-decompress.py", f"{ARGS.output}.zip/assemblies"], 
+                error_message=f"Failed to decompress '{ARGS.output}.zip/assemblies'")
+        success(f"Decompressed C# assemblies ('{ARGS.output}.zip/assemblies')")
+    
+    success(f"Completed ('{ARGS.file}' -> {apk_type})")
 
 
 def create_keystore(ARGS):
@@ -22,7 +57,7 @@ def create_keystore(ARGS):
                 exit(1)
     
     progress(f"Creating keystore file...")
-    command(['keytool', '-genkey', '-noprompt', '-dname', 'CN=, OU=, O=, L=, S=, C=', '-keystore', os.path.expanduser(ARGS.output), '-alias', 'apk', '-storepass', ARGS.password, '-keypass', ARGS.password], 
+    command(['keytool', '-genkey', '-noprompt', '-dname', 'CN=, OU=, O=, L=, S=, C=', '-keystore', os.path.expanduser(ARGS.output), '-alias', 'apk', '-keyalg', 'RSA', '-storepass', ARGS.password, '-keypass', ARGS.password], 
             error_message="Failed to create keystore file")
     
     success(f"Keystore file created ('{ARGS.output}')")
@@ -43,16 +78,19 @@ def build(ARGS):
     aligned_apk = os.path.join(ARGS.folder, 'dist', apk_name + '-aligned.apk')
     signed_apk = os.path.join(ARGS.folder, 'dist', apk_name + '-signed.apk')
     
+    # Build into APK
     progress(f"Building '{ARGS.folder}'...")
     command(['apktool', 'b', '-f', ARGS.folder], 
             error_message=f"Failed to build '{ARGS.folder}'")
+    success(f"Build successful ('{built_apk}')")
     
-    success("Build successful")
+    # ZIP align APK
     progress(f"Aligning '{built_apk}'...")
     command(['zipalign', '-f', '4', built_apk, aligned_apk], 
             error_message=f"Failed to align '{built_apk}'")
+    success(f"Alignment successful ('{aligned_apk}')")
     
-    success("Alignment successful")
+    # Sign APK with keystore
     progress(f"Signing '{aligned_apk}'...")
     if ARGS.version is not None:
         version_args = []
@@ -68,9 +106,9 @@ def build(ARGS):
         command(['java', '-jar', '/usr/bin/apksigner', 'sign', '-out', signed_apk, '--ks-key-alias', 'apk', '--ks', os.path.expanduser(ARGS.keystore), '--key-pass', f'pass:{ARGS.password}', '--ks-pass', f'pass:{ARGS.password}', '-v', aligned_apk],
                 error_message=f"Failed to sign '{aligned_apk}'")
     command(['java', '-jar', '/usr/bin/apksigner', 'verify', '-v', signed_apk])
+    success(f"Signing successful ('{signed_apk}')")
     
-    success("Signing successful")
-    
+    # Copy file to output location
     if ARGS.output:
         command(['cp', signed_apk, ARGS.output])
     else:
