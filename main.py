@@ -8,7 +8,7 @@ from colorama import Fore, Style
 LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
 
 def progress(message):
-    print(f"[{Fore.LIGHTBLUE_EX}~{Style.RESET_ALL}] {message}")
+    print(f"[{Fore.LIGHTCYAN_EX}~{Style.RESET_ALL}] {message}")
     
 def error(message):
     print(f"[{Fore.LIGHTRED_EX}!{Style.RESET_ALL}] {message}")
@@ -16,6 +16,9 @@ def error(message):
     
 def success(message):
     print(f"[{Fore.LIGHTGREEN_EX}+{Style.RESET_ALL}] {message}")
+
+def info(message):
+    print(f"[{Fore.LIGHTBLUE_EX}*{Style.RESET_ALL}] {message}")
 
 def ask(message):
     return input(f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {message} ")

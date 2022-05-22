@@ -1,4 +1,4 @@
-from main import PathType, progress, error, success, command, ask, LIBRARY_DIR
+from main import PathType, progress, error, success, info, command, ask, LIBRARY_DIR
 import os
 
 def decompile(ARGS):
@@ -30,15 +30,17 @@ def decompile(ARGS):
     # Decompile if React Native bundle
     if os.path.exists(f"{ARGS.output}.zip/assets/index.android.bundle"):
         apk_type = "React Native"
-        progress(f"Detected React Native, decompiling '{ARGS.output}.zip/assets/index.android.bundle'...")
+        info("Detected React Native")
+        progress(f"Decompiling '{ARGS.output}.zip/assets/index.android.bundle'...")
         command(["npx", "react-native-decompiler", "-i", f"{ARGS.output}.zip/assets/index.android.bundle", "-o", f"{ARGS.output}.js"], 
                 error_message=f"Failed to decompile '{ARGS.output}.zip/assets/index.android.bundle'")
         success(f"Decompiled React Native bundle ('{ARGS.output}.js')")
         
     # Decompress if C# DLLs
     if os.path.exists(f"{ARGS.output}.zip/assemblies"):   
-        apk_type = "C#" 
-        progress(f"Detected C#, decompressing '{ARGS.output}.zip/assemblies'...")
+        apk_type = "C#"
+        info("Detected C#")
+        progress(f"Decompressing '{ARGS.output}.zip/assemblies'...")
         command(["python3", f"{LIBRARY_DIR}/xamarin-decompress.py", f"{ARGS.output}.zip/assemblies"], 
                 error_message=f"Failed to decompress '{ARGS.output}.zip/assemblies'")
         success(f"Decompressed C# assemblies ('{ARGS.output}.zip/assemblies')")
@@ -123,7 +125,7 @@ parser_apk = __main__.subparsers.add_parser('apk', help='Run apk command')
 parser_apk_subparsers = parser_apk.add_subparsers(dest='action', required=True)
 parser_apk_decompile = parser_apk_subparsers.add_parser('decompile', help='Decompile APK file')
 parser_apk_decompile.add_argument('file', type=PathType(), help='APK file to decompile')
-parser_apk_decompile.add_argument('-o', '--output', type=PathType(exists=False, type='dir'), help='Output folder')
+parser_apk_decompile.add_argument('-o', '--output', help='Output folder')
 parser_apk_decompile.set_defaults(func=decompile)
 parser_apk_create_keystore = parser_apk_subparsers.add_parser('create_keystore', help='Create a keystore file for APK signing')
 parser_apk_create_keystore.add_argument('-o', '--output', help='Output keystore file location', default="~/apk.keystore")
