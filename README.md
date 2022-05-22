@@ -59,6 +59,13 @@ default -h
 
 ## Dependencies
 
+```Shell
+sudo apt-get install apktool apksigner zipalign  # Install APK tools
+sudo apt-get install nmap masscan  # Install network tools
+# <Download latest release from https://github.com/pxb1988/dex2jar/releases>
+sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar to PATH
+```
+
 ### APK
 
 * [**apktool**](https://ibotpeaches.github.io/Apktool/) for decompiling and building an APK
@@ -66,15 +73,11 @@ default -h
 * [**zipalign**](https://developer.android.com/studio/command-line/zipalign) to align an APK
 * [**dex2jar**](https://github.com/pxb1988/dex2jar) to convert a `classes.dex` file to a JAR file
 * [**xamarin-decompress**](https://github.com/NickstaDB/xamarin-decompress) to decompress DLL files (already included in [`/lib`](/lib))
-* [**nmap**](https://nmap.org/) to scan ports on a network
-* [**masscan**](https://github.com/robertdavidgraham/masscan) to scan ports very quickly, and pass them to nmap
 
-```Shell
-sudo apt-get install apktool apksigner zipalign  # Install APK tools
-sudo apt-get install nmap masscan  # Install network tools
-# <Download latest release from https://github.com/pxb1988/dex2jar/releases>
-sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar to PATH
-```
+### Nmap
+
+* [**nmap**](https://nmap.org/) to get detailed information about open ports
+* [**masscan**](https://github.com/robertdavidgraham/masscan) to scan ports very quickly, and pass them to nmap
 
 ## TODO:
 
