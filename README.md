@@ -9,6 +9,7 @@ Similar to bash function, these actions just execute bash commands under the hoo
 * `default apk decompile`: Decompile an APK file into an APK source folder
 * `default apk create_keystore`: Create a keystore file with a password
 * `default apk build`: Build, align and sign an APK source folder into an APK file
+* `default nmap`: Scan a network or ip address quickly for open ports with nmap
 
 ## Usage
 
@@ -17,6 +18,8 @@ default <command> [<action>] [<args>]
 ```
 
 ## Examples
+
+### APK
 
 ```Shell
 default apk decompile click_me.apk
@@ -35,6 +38,14 @@ default apk build click_me -o new.apk -k test.keystore -p j0r1an
 ```
 
 <img src="https://user-images.githubusercontent.com/26067369/167902777-01b8de55-e371-48d7-b304-5e031ee2a07c.png" width="800" alt="Screenshot of building APK">
+
+### Nmap
+
+```Shell
+default nmap scanme.nmap.org --top
+```
+
+<img src="https://user-images.githubusercontent.com/26067369/169713168-e030914e-2665-4ac6-bf76-c5efbd3bb535.png" width="800" alt="Screenshot of nmap scan on scanme.nmap.org">
 
 ## Installation
 
@@ -55,14 +66,16 @@ default -h
 * [**zipalign**](https://developer.android.com/studio/command-line/zipalign) to align an APK
 * [**dex2jar**](https://github.com/pxb1988/dex2jar) to convert a `classes.dex` file to a JAR file
 * [**xamarin-decompress**](https://github.com/NickstaDB/xamarin-decompress) to decompress DLL files (already included in [`/lib`](/lib))
+* [**nmap**](https://nmap.org/) to scan ports on a network
+* [**masscan**](https://github.com/robertdavidgraham/masscan) to scan ports very quickly, and pass them to nmap
 
 ```Shell
 sudo apt-get install apktool apksigner zipalign  # Install APK tools
+sudo apt-get install nmap masscan  # Install network tools
 # <Download latest release from https://github.com/pxb1988/dex2jar/releases>
 sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar to PATH
 ```
 
 ## TODO:
 
-- [ ] Add `scan` command for scanning things (`nmap`, `masscan`)
 - [ ] Add `brute` command for brute-forcing (`ffuf`, `hydra`)
