@@ -41,9 +41,9 @@ def decompile(ARGS):
         apk_type = "C#"
         info("Detected C#")
         progress(f"Decompressing '{ARGS.output}.zip/assemblies'...")
-        command(["python3", f"{LIBRARY_DIR}/xamarin-decompress.py", f"{ARGS.output}.zip/assemblies"], 
-                error_message=f"Failed to decompress '{ARGS.output}.zip/assemblies'")
-        success(f"Decompressed C# assemblies ('{ARGS.output}.zip/assemblies')")
+        from lib.xamarin_decompress import decompress
+        success_count = decompress(f"{ARGS.output}.zip/assemblies")
+        success(f"Decompressed {success_count} C# assemblies ('{ARGS.output}.zip/assemblies')")
     
     success(f"Completed ('{ARGS.file}' -> {apk_type})")
 

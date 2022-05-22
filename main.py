@@ -8,7 +8,7 @@ from colorama import Fore, Style
 LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
 
 def progress(message):
-    print(f"[{Fore.LIGHTCYAN_EX}~{Style.RESET_ALL}] {message}")
+    print(f"[{Fore.LIGHTBLUE_EX}~{Style.RESET_ALL}] {message}")
     
 def error(message):
     print(f"[{Fore.LIGHTRED_EX}!{Style.RESET_ALL}] {message}")
@@ -18,16 +18,24 @@ def success(message):
     print(f"[{Fore.LIGHTGREEN_EX}+{Style.RESET_ALL}] {message}")
 
 def info(message):
-    print(f"[{Fore.LIGHTBLUE_EX}*{Style.RESET_ALL}] {message}")
+    print(f"[{Fore.LIGHTCYAN_EX}*{Style.RESET_ALL}] {message}")
 
 def ask(message):
     return input(f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {message} ")
 
-def command(command, *, error_message="Failed to execute command"):
+def command(command, error_message="Failed to execute command", highlight=False):
     print(Fore.LIGHTBLACK_EX, end="\r")
     print("$", " ".join(shlex.quote(c) for c in command))
+    if highlight:  
+        print(Style.RESET_ALL, end="\r")
+    
     p = subprocess.run(command)
-    print(Style.RESET_ALL, end="")
+    
+    if highlight:
+        print()
+    else:
+        print(Style.RESET_ALL, end="")
+    
     if p.returncode != 0:
         error(error_message)
 
@@ -92,7 +100,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run commands with default arguments')
     subparsers = parser.add_subparsers(dest='command', required=True)
     
-    from commands import apk
+    from commands import apk, nmap
     
     ARGS = parser.parse_args()
     ARGS.func(ARGS)  # Execute function for command
