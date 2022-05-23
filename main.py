@@ -1,9 +1,10 @@
 import argparse
 from argparse import ArgumentTypeError
+from colorama import Fore, Style
 import os
 import shlex
 import subprocess
-from colorama import Fore, Style
+import re
 
 LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
 
@@ -20,8 +21,18 @@ def success(message):
 def info(message):
     print(f"[{Fore.LIGHTCYAN_EX}*{Style.RESET_ALL}] {message}")
 
-def ask(message):
-    return input(f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {message} ")
+def ask(message, default=True):
+    while True:
+        question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {message} [y/n] "
+        choice = input(question).lower()[:1]
+        if choice == "y":
+            return True
+        elif choice == "n":
+            return False
+        elif choice == "":  # Default
+            choice = "y" if default else "n"
+            print(f"\033[F\033[{len(strip_ansi(question))}G {choice}")  # Place default choice in question answer
+            return default
 
 def command(command, error_message="Failed to execute command", highlight=False):
     print(Fore.LIGHTBLACK_EX, end="\r")
@@ -38,6 +49,9 @@ def command(command, error_message="Failed to execute command", highlight=False)
     
     if p.returncode != 0:
         error(error_message)
+
+def strip_ansi(source):
+    return re.sub(r'\033\[(\d|;)+?m', '', source)
 
 class PathType(object):  # From: https://stackoverflow.com/a/33181083/10508498
     def __init__(self, exists=True, type='file', dash_ok=True):
@@ -103,4 +117,8 @@ if __name__ == '__main__':
     from commands import apk, nmap
     
     ARGS = parser.parse_args()
-    ARGS.func(ARGS)  # Execute function for command
+    try:
+        ARGS.func(ARGS)  # Execute function for command
+    except KeyboardInterrupt:
+        print()
+        error("Exiting...")

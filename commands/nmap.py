@@ -22,13 +22,11 @@ def masscan(ARGS):
 
 def nmap(ARGS):
     if os.path.exists(ARGS.output):
-        while True:
-            choice = ask(f"Nmap output file '{ARGS.output}' already exists, do you want to overwrite it? [y/n]").lower()[:1]
-            if choice == "y":
-                os.remove(ARGS.output)
-                break
-            elif choice == "n":
-                exit(1)
+        choice = ask(f"Nmap output file '{ARGS.output}' already exists, do you want to overwrite it?")
+        if choice:
+            os.remove(ARGS.output)
+        else:
+            exit(1)
                 
     if ARGS.masscan:
         results = masscan(ARGS)

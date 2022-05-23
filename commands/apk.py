@@ -50,13 +50,11 @@ def decompile(ARGS):
 
 def create_keystore(ARGS):
     if os.path.exists(os.path.expanduser(ARGS.output)):
-        while True:
-            choice = ask(f"Keystore '{ARGS.output}' already exists, do you want to overwrite it? [y/n]").lower()[:1]
-            if choice == "y":
-                os.remove(os.path.expanduser(ARGS.output))
-                break
-            elif choice == "n":
-                exit(1)
+        choice = ask(f"Keystore '{ARGS.output}' already exists, do you want to overwrite it?")
+        if choice:
+            os.remove(os.path.expanduser(ARGS.output))
+        else:
+            exit(1)
     
     progress(f"Creating keystore file...")
     command(['keytool', '-genkey', '-noprompt', '-dname', 'CN=, OU=, O=, L=, S=, C=', '-keystore', os.path.expanduser(ARGS.output), '-alias', 'apk', '-keyalg', 'RSA', '-storepass', ARGS.password, '-keypass', ARGS.password], 
