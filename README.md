@@ -9,7 +9,7 @@ Similar to bash function, these actions just execute bash commands under the hoo
 * `default apk decompile`: Decompile an APK file into an APK source folder
 * `default apk create_keystore`: Create a keystore file with a password
 * `default apk build`: Build, align and sign an APK source folder into an APK file
-* `default nmap`: Scan a network or ip address quickly for open ports with nmap
+* `default nmap`: Scan a network or IP address quickly for open ports with nmap
 
 ## Usage
 
