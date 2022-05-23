@@ -81,4 +81,5 @@ sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar
 
 ## TODO:
 
-- [ ] Add `brute` command for brute-forcing (`ffuf`, `hydra`)
+- [ ] Add `ffuf` command for web fuzzing (`path`, `parameter`, `vhost`)
+- [ ] Add `hydra` command for brute-forcing (`ssh`)
