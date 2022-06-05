@@ -10,6 +10,7 @@ Similar to bash function, these actions just execute bash commands under the hoo
 * `default apk create_keystore`: Create a keystore file with a password
 * `default apk build`: Build, align and sign an APK source folder into an APK file
 * `default nmap`: Scan a network or IP address quickly for open ports with nmap
+* `default crack`: Crack password protected files and hashes with hashcat and John the Ripper
 
 ## Usage
 
@@ -47,6 +48,20 @@ default nmap scanme.nmap.org --top
 
 <img src="https://user-images.githubusercontent.com/26067369/169713168-e030914e-2665-4ac6-bf76-c5efbd3bb535.png" width="800" alt="Screenshot of nmap scan on scanme.nmap.org">
 
+### Cracking
+
+```Shell
+default crack archive.rar
+```
+
+<img src="https://cdn.discordapp.com/attachments/901100796316356639/983047063346499685/default_crack_zip.gif" width="800" alt="GIF animation of cracking a RAR archive using hashcat in WSL">
+
+```Shell
+default crack hash.txt --john
+```
+
+<img src="https://user-images.githubusercontent.com/26067369/172061551-63801284-b227-4ea8-9fe1-cee595cca68b.png" width="800" alt="Screenshot of cracking a SHA256 hash using John the Ripper">
+
 ## Installation
 
 ```Shell
@@ -79,7 +94,12 @@ sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar
 * [**nmap**](https://nmap.org/) to get detailed information about open ports
 * [**masscan**](https://github.com/robertdavidgraham/masscan) to scan ports very quickly, and pass them to nmap
 
+### Cracking
+
+* [**Name-That-Hash**](https://github.com/HashPals/Name-That-Hash) to identify the hash type and john/hashcat modes (included in [`requirements.txt`](requirements.txt))
+
 ## TODO:
 
 - [ ] Add `ffuf` command for web fuzzing (`path`, `parameter`, `vhost`)
 - [ ] Add `hydra` command for brute-forcing (`ssh`)
+- [ ] Add `listener` command for creating a listener for connections
