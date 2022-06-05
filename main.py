@@ -34,21 +34,30 @@ def ask(message, default=True):
             print(f"\033[F\033[{len(strip_ansi(question))}G {choice}")  # Place default choice in question answer
             return default
 
-def command(command, error_message="Failed to execute command", highlight=False):
+def command(command, error_message="Failed to execute command", highlight=False, get_output=False, **kwargs):
     print(Fore.LIGHTBLACK_EX, end="\r")
     print("$", " ".join(shlex.quote(c) for c in command))
     if highlight:  
         print(Style.RESET_ALL, end="\r")
     
-    p = subprocess.run(command)
+    errored = False
+    try:
+        p = subprocess.run(command, stdout=subprocess.PIPE if get_output else None, stderr=subprocess.PIPE if get_output else None, 
+                           **kwargs)
+    except FileNotFoundError as e:
+        print(e)
+        errored = True
     
     if highlight:
         print()
     else:
         print(Style.RESET_ALL, end="")
     
-    if p.returncode != 0:
-        error(error_message)
+    if errored or p.returncode != 0:
+        if error_message != None:
+            error(error_message)
+        
+    return p.stdout
 
 def strip_ansi(source):
     return re.sub(r'\033\[(\d|;)+?m', '', source)
@@ -114,7 +123,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run commands with default arguments')
     subparsers = parser.add_subparsers(dest='command', required=True)
     
-    from commands import apk, nmap
+    from commands import apk, nmap, crack
     
     ARGS = parser.parse_args()
     try:
