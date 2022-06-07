@@ -3,8 +3,13 @@ from config import JOHN_RUN_PATH, WORDLIST_PATH, HASHCAT_WINDOWS_PATH
 import json
 import re
 from colorama import Fore, Style
+import tempfile
+
+RAW_HASHES_EXT = [".hash", ".txt", ".hashes", ".hashcat", ".john", ""]
+NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip"]  # John format names
 
 
+# Helper functions
 def wslpath(path):
     if path == None:
         return None
@@ -20,6 +25,118 @@ def fix_json_newlines(data):
             return data
         prev = data
 
+def strip_john_hash(hashes):
+    if type(hashes) is list:
+        return [strip_john_hash(h) for h in hashes]
+    
+    if ":" in hashes:
+        return hashes.split(":")[1]
+    return hashes
+
+
+def crack_hashcat(ARGS, hash_type):
+    """Crack hashes using hashcat"""
+    # Convert hashes to hashcat format
+    if hash_type["john"] in NEEDS_CONVERTING:
+        with open(ARGS.file, "r") as f:  # Read
+            hashes = f.read().splitlines()
+        with open(ARGS.file, "w") as f:  # Write
+            f.write("\n".join(strip_john_hash(hashes)))
+        
+    if ARGS.no_cache:  # Remove already cracked passwords from cache
+        try:
+            if is_wsl:
+                file = f"'{HASHCAT_WINDOWS_PATH}\\hashcat.potfile'"
+                command(["powershell.exe", f"if (test-path {file}) {{ rm {file} }}"])
+            else:
+                os.remove(os.path.expanduser("~/.hashcat/hashcat.potfile"))
+            success("Removed hashcat.potfile")
+        except FileNotFoundError:
+            pass
+    
+    is_wsl = os.path.exists("/mnt/c/Windows")  # Detect WSL
+    
+    if is_wsl:
+        info("Detected WSL, using powershell.exe to crack hashes for GPU acceleration")
+        ARGS.file = wslpath(ARGS.file)
+        ARGS.wordlist = wslpath(ARGS.wordlist)
+        ARGS.output = wslpath(ARGS.output)
+        output_args = f"--outfile {ARGS.output}" if ARGS.output else ""
+        progress("Cracking hashes...")
+        command(["powershell.exe", "-c", f"cd '{HASHCAT_WINDOWS_PATH}'; hashcat -m {hash_type['hashcat']} '{ARGS.file}' '{ARGS.wordlist}' {output_args}"], 
+                highlight=True, error_message=None)
+    else:
+        output_args = ["--outfile", ARGS.output] if ARGS.output else []
+        progress("Cracking hashes...")
+        command(["hashcat", "--force", "-m", str(hash_type['hashcat']), *output_args, ARGS.file, ARGS.wordlist], 
+                highlight=True, error_message=None)
+    
+    success("Finished cracking hashes. Results:")
+    if is_wsl:
+        output = command(["powershell.exe", "-c", f"cd '{HASHCAT_WINDOWS_PATH}'; hashcat --show -m {hash_type['hashcat']} '{ARGS.file}'"], 
+                get_output=True, error_message="Failed to crack hashes")
+    else:
+        output = command(["hashcat", "--show", "-m", str(hash_type['hashcat']), ARGS.file], 
+                get_output=True, error_message="Failed to crack hashes")
+    
+    if ARGS.output:
+        with open(ARGS.output, "wb") as f:
+            f.write(output)
+    
+    return output
+
+
+def crack_john(ARGS, hash_type):
+    """Crack hashes using John the Ripper"""
+    if ARGS.no_cache:  # Remove already cracked passwords from cache
+        try:
+            os.remove(os.path.expanduser(f"{JOHN_RUN_PATH}/john.pot"))
+            success("Removed john.pot")
+        except FileNotFoundError:
+            pass
+    
+    progress("Cracking hashes...")
+    command([f'{JOHN_RUN_PATH}/john', f"--wordlist={ARGS.wordlist}", f"--format={hash_type['john']}", ARGS.file], highlight=True)
+
+    success("Finished cracking hashes. Results:")
+    output = command([f'{JOHN_RUN_PATH}/john', '--show', f"--format={hash_type['john']}", ARGS.file], get_output=True)
+    if ARGS.output:
+        with open(ARGS.output, "wb") as f:
+            f.write(output)
+    
+    return output
+
+
+def find_hash_type(file):
+    """Detect hash type using Name-That-Hash"""
+    name_that_hash = command(['nth', '-g', '-f', file], get_output=True, error_message="Failed to run Name-That-Hash. Is it installed?")
+    name_that_hash = json.loads(fix_json_newlines(name_that_hash))
+    
+    hash_type = None
+    for hash in name_that_hash.values():
+        for detected in hash:
+            if 'hashcat' in detected:
+                if hash_type != None and hash_type != detected:  # If not first iteration, and hash type is different from previous
+                    error(f"Multiple hash types detected. Please check '{file}' and try cracking them individually.")
+                hash_type = detected
+                break
+            elif 'john' in detected:
+                if hash_type != None and hash_type != detected:  # If not first iteration, and hash type is different from previous
+                    error(f"Multiple hash types detected. Please check '{file}' and try cracking them individually.")
+                hash_type = detected
+                if not ARGS.john:  # If only crackable with john, ask to switch to john
+                    choice = ask(f"{hash_type['name']} is only crackable with john, want to force john instead of hashcat?")
+                    if choice:
+                        ARGS.john = True
+                    else:
+                        exit(1)
+                break
+        else:
+            return None
+    
+    return hash_type
+
+
 def crack(ARGS):
     if ARGS.output and os.path.exists(ARGS.output):
         choice = ask(f"Crack output file '{ARGS.output}' already exists, do you want to overwrite it?")
@@ -28,163 +145,90 @@ def crack(ARGS):
         else:
             exit(1)
     
-    # Get hashes
     basename, ext = os.path.splitext(ARGS.file)
-    if ext == ".txt" or ext == ".hash":  # Raw hashes
-        with open(ARGS.file) as f:
-            hashes = f.read().splitlines()
-            hashes_count = len(hashes)
+    
+    # Extract hash automatically
+    archive_file = None
+    if ext == ".rar":  # RAR archive
+        progress("Extracting hash from RAR archive...")
+        hash = command([f"{JOHN_RUN_PATH}/rar2john", ARGS.file], get_output=True, error_message="Could not extract hash from RAR archive")
+        archive_file = ARGS.file
+    elif ext == ".zip":  # ZIP archive
+        progress("Extracting hash from ZIP archive...")
+        hash = command([f"{JOHN_RUN_PATH}/zip2john", ARGS.file], get_output=True, error_message="Could not extract hash from ZIP archive")
+        archive_file = ARGS.file
+    elif ext == ".7z":  # 7z archive
+        progress("Extracting hash from 7z archive...")
+        hash = command([f"{JOHN_RUN_PATH}/7z2john.pl", ARGS.file], get_output=True, error_message="Could not extract hash from 7z archive")
+        archive_file = ARGS.file
+    elif ext not in RAW_HASHES_EXT:  # Not a raw hash either, so unknown
+        error(f"Unknown file type: {ext}. Try making a hash out of it and pass the hash as the argument")
+    
+    if archive_file:  # If extracted in previous part
+        ARGS.file = archive_file + ".hash"
+        with open(ARGS.file, "wb") as f:
+            f.write(hash)
         
-        multiple = 'es' if len(hashes) > 1 else ""
-        info(f"Found {len(hashes)} hash{multiple} in '{ARGS.file}'")
-        
-        if not ARGS.mode:
-            # Detect hash type
-            progress("Detecting hash type...") 
-            name_that_hash = command(['nth', '-g', '-f', ARGS.file], get_output=True, error_message="Could not detect hash type. Is name-that-hash installed and updated?")
-            name_that_hash = json.loads(fix_json_newlines(name_that_hash))
-            first = name_that_hash[hashes[0]]
-            for detected in first:
-                if 'hashcat' in detected:
-                    hash_type = detected
-                    break
-                elif 'john' in detected:
-                    hash_type = detected
-                    ARGS.john = True
-                    info(f"Hash only crackable with john")
-                    break
-            else:
-                error("Could not detect hash type")
+        success(f"Wrote hash to '{ARGS.file}'")
+    
+    # Get hashes and types
+    with open(ARGS.file) as f:  # File must be a raw hash at this point
+        hashes = f.read().splitlines()
+    
+    multiple = 'es' if len(hashes) > 1 else ""  # Pluralize
+    info(f"Found {len(hashes)} hash{multiple} in '{ARGS.file}'")
+    
+    if not ARGS.mode:  # If mode not forced
+        progress("Detecting hash type...") 
+        hash_type = find_hash_type(ARGS.file)
+        if hash_type == None:  # Retry
+            info("Hash type was not hashcat foramt, converting from john and trying again")
             
-            success(f"Detected hash type: {hash_type['name']}")
-        else:  # Force mode
-            hash_type = {
-                'hashcat': ARGS.mode,
-                'john': ARGS.mode
-            }
-    else:
-        if ext == ".rar":  # RAR archive
-            progress("Extracting hash from RAR archive...")
-            hash = command([f"{JOHN_RUN_PATH}/rar2john", ARGS.file], get_output=True, error_message="Could not extract hash from rar archive")
-            if not ARGS.john:
-                hash = hash.split(b":")[1]  # Convert john to hashcat (remove filename)
+             # Convert to hashcat format
+            with open(ARGS.file, "r") as f:  # Read
+                hashes = f.read().splitlines()
             
-            ARGS.original_file = ARGS.file
-            ARGS.file += ".hash"
-            with open(ARGS.file, "wb") as f:
-                f.write(hash)
-                hashes_count = 1
-            
-            success(f"Wrote hash to '{ARGS.file}'")
-            hash_type = {
-                'hashcat': 13000,
-                'john': 'rar5'
-            }
-        elif ext == ".zip":
-            info("Note: This is a temporary workaround for detecting zip files, if you have problems try using the --mode option to force a hash type")
-            # https://hashcat.net/wiki/doku.php?id=example_hashes
-            zip_types = {  # TODO: Will add these to Name-That-Hash later
-                b"$zip2$": {"hashcat": 13600, "john": "zip"},
-                b"$pkzip2$": {"hashcat": 17200, "john": "zip"},  #! Not always correct, only for normal compressed zip
-            }
-            progress("Extracting hash from ZIP archive...")
-            hash = command([f"{JOHN_RUN_PATH}/zip2john", ARGS.file], get_output=True, error_message="Could not extract hash from zip archive")
-            
-            #! Temporary, until Name-That-Hash supports zip types
-            if not ARGS.mode:
-                for zip_type in zip_types:
-                    if hash.split(b":")[1].startswith(zip_type):
-                        hash_type = zip_types[zip_type]
-                        break
-                else:
-                    error("Could not detect hash type")
-            
-            if not ARGS.john:
-                hash = hash.split(b":")[1]  # Convert john to hashcat (remove filename)
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                tmp.write("\n".join(strip_john_hash(hashes)).encode())
                 
-            ARGS.original_file = ARGS.file
-            ARGS.file += ".hash"
-            with open(ARGS.file, "wb") as f:
-                f.write(hash)
-                hashes_count = 1
+            hash_type = find_hash_type(tmp.name)
+            if hash_type == None:
+                if archive_file:
+                    error(f"Could not detect hash type of '{ARGS.file}', but it should. Make sure you have the **newest** version of Name-That-Hash installed, I only added these hashes very recently.")
+                else:
+                    error(f"Could not detect hash type of '{ARGS.file}'. Try manutally setting the hash type with --mode")
             
-            success(f"Wrote hash to '{ARGS.file}'")
+        success(f"Detected hash type: {hash_type['name']}")
+    else:  # Force mode
+        hash_type = {
+            'hashcat': ARGS.mode,
+            'john': ARGS.mode
+        }
     
     # Crack hashes
     if ARGS.john:  # John the Ripper
-        if ARGS.no_cache:  # Remove already cracked passwords from cache
-            try:
-                os.remove(os.path.expanduser(f"{JOHN_RUN_PATH}/john.pot"))
-                success("Removed john.pot")
-            except FileNotFoundError:
-                pass
-        
-        progress("Cracking hashes...")
-        command([f'{JOHN_RUN_PATH}/john', f"--wordlist={ARGS.wordlist}", f"--format={hash_type['john']}", ARGS.file], highlight=True)
-
-        success("Finished cracking hashes. Results:")
-        output = command([f'{JOHN_RUN_PATH}/john', '--show', f"--format={hash_type['john']}", ARGS.file], get_output=True)
-        if ARGS.output:
-            with open(ARGS.output, "wb") as f:
-                f.write(output)
+        output = crack_john(ARGS, hash_type)
         
         output_parts = output.split(b"\n\n")
         if len(output_parts) > 1:
             print(f"{Fore.RED}{output_parts[0].decode()}{Style.RESET_ALL}")
         cracked_count = int(re.findall(r"(\d+) password hash(?:es)? cracked, (\d+) left", output_parts[-1].decode())[0][0])
-        success(f"Cracked {cracked_count}/{hashes_count} hashes")
+        success(f"Cracked {cracked_count}/{len(hashes)} hashes")
     else:  # Hashcat (default)
-        is_wsl = os.path.exists("/mnt/c/Windows")  # Detect WSL
-        
-        if ARGS.no_cache:  # Remove already cracked passwords from cache
-            try:
-                if is_wsl:
-                    command(["powershell.exe", f"rm '{HASHCAT_WINDOWS_PATH}\\hashcat.potfile'"])
-                else:
-                    os.remove(os.path.expanduser("~/.hashcat/hashcat.potfile"))
-                success("Removed hashcat.potfile")
-            except FileNotFoundError:
-                pass
-        
-        if is_wsl:
-            info("Detected WSL, using powershell.exe to crack hashes for GPU acceleration")
-            ARGS.file = wslpath(ARGS.file)
-            ARGS.wordlist = wslpath(ARGS.wordlist)
-            ARGS.output = wslpath(ARGS.output)
-            output_args = f"--outfile {ARGS.output}" if ARGS.output else ""
-            progress("Cracking hashes...")
-            command(["powershell.exe", "-c", f"cd '{HASHCAT_WINDOWS_PATH}'; hashcat -m {hash_type['hashcat']} '{ARGS.file}' '{ARGS.wordlist}' {output_args}"], 
-                    highlight=True, error_message=None)
-        else:
-            output_args = ["--outfile", ARGS.output] if ARGS.output else []
-            progress("Cracking hashes...")
-            command(["hashcat", "--force", "-m", str(hash_type['hashcat']), *output_args, ARGS.file, ARGS.wordlist], 
-                    highlight=True, error_message=None)
-        
-        success("Finished cracking hashes. Results:")
-        if is_wsl:
-            output = command(["powershell.exe", "-c", f"cd '{HASHCAT_WINDOWS_PATH}'; hashcat --show -m {hash_type['hashcat']} '{ARGS.file}'"], 
-                    get_output=True, error_message="Failed to crack hashes")
-        else:
-            output = command(["hashcat", "--show", "-m", str(hash_type['hashcat']), ARGS.file], 
-                    get_output=True, error_message="Failed to crack hashes")
-        
-        if ARGS.output:
-            with open(ARGS.output, "wb") as f:
-                f.write(output)
+        output = crack_hashcat(ARGS, hash_type)
         
         print(f"{Fore.RED}{output.decode()}{Style.RESET_ALL}")
         cracked_count = len(output.split(b"\n")) - 1
-        success(f"Cracked {cracked_count}/{hashes_count} hashes")
+        success(f"Cracked {cracked_count}/{len(hashes)} hashes")
     
-    # Automatically extract archives with password
+    # Automatically extract archives with found password
     if ext == ".rar" and cracked_count > 0:
         choice = ask("Found password for RAR archive. Do you want to extract it?")
         if choice:
             progress("Extracting archive with found password...")
             password = output.split(b":")[1].split(b"\n")[0].decode().strip()
             command(["mkdir", "-p", basename])
-            command(["unrar", "x", "../"+ARGS.original_file, f"-p{password}", "-o+"], cwd=basename, 
+            command(["unrar", "x", "../"+archive_file, f"-p{password}", "-o+"], cwd=basename, 
                     error_message="Failed to extract archive with password, try extracting manually")
             success(f"Extracted RAR archive to {basename}")
     elif ext == ".zip" and cracked_count > 0:
@@ -192,9 +236,17 @@ def crack(ARGS):
         if choice:
             progress("Extracting archive with found password...")
             password = output.split(b":")[1].split(b"\n")[0].decode().strip()
-            command(["7z", "x", ARGS.original_file, f"-p{password}", f"-o{basename}", "-aoa"], 
+            command(["7z", "x", archive_file, f"-p{password}", f"-o{basename}", "-aoa"], 
                     error_message="Failed to extract archive with password, try extracting manually")
             success(f"Extracted ZIP archive to {basename}")
+    elif ext == ".7z" and cracked_count > 0:
+        choice = ask("Found password for 7z archive. Do you want to extract it?")
+        if choice:
+            progress("Extracting archive with found password...")
+            password = output.split(b":")[1].split(b"\n")[0].decode().strip()
+            command(["7z", "x", archive_file, f"-p{password}", f"-o{basename}", "-aoa"], 
+                    error_message="Failed to extract archive with password, try extracting manually")
+            success(f"Extracted 7z archive to {basename}")
 
 
 import sys  # Import live values from main.py

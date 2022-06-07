@@ -96,7 +96,7 @@ sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar
 
 ### Cracking
 
-* [**Name-That-Hash**](https://github.com/HashPals/Name-That-Hash) to identify the hash type and john/hashcat modes (included in [`requirements.txt`](requirements.txt))
+* **Newest** version of [**Name-That-Hash**](https://github.com/HashPals/Name-That-Hash) to identify the hash type and john/hashcat modes (included in [`requirements.txt`](requirements.txt)) - I only added the archives hash signatures very recently
 
 ## TODO:
 
