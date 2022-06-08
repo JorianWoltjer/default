@@ -6,7 +6,7 @@ from colorama import Fore, Style
 import tempfile
 
 RAW_HASHES_EXT = [".hash", ".txt", ".hashes", ".hashcat", ".john", ""]
-NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip"]  # John format names
+NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip", "11600", "13600", "17200", "17210", "17220", "17225", "17230", "23700", "23800", "12500", "13000"]
 
 
 # Helper functions
@@ -18,12 +18,7 @@ def wslpath(path):
 
 def fix_json_newlines(data):
     """Remove newlines in JSON strings (bug in nth)"""
-    prev = b""
-    while True:  # Remove one at a time
-        data = re.sub(rb'("[^"\n]*)\r?\n(?!(([^"]*"){2})*[^"]*$)', rb'\1', data)
-        if data == prev:
-            return data
-        prev = data
+    return data.replace(b"\n", b"").replace(b"\r", b"")
 
 def strip_john_hash(hashes):
     if type(hashes) is list:
@@ -37,12 +32,14 @@ def strip_john_hash(hashes):
 def crack_hashcat(ARGS, hash_type):
     """Crack hashes using hashcat"""
     # Convert hashes to hashcat format
-    if hash_type["john"] in NEEDS_CONVERTING:
+    if hash_type["john"] in NEEDS_CONVERTING or hash_type["hashcat"] in NEEDS_CONVERTING:
         with open(ARGS.file, "r") as f:  # Read
             hashes = f.read().splitlines()
         with open(ARGS.file, "w") as f:  # Write
             f.write("\n".join(strip_john_hash(hashes)))
-        
+    
+    is_wsl = os.path.exists("/mnt/c/Windows")  # Detect WSL
+    
     if ARGS.no_cache:  # Remove already cracked passwords from cache
         try:
             if is_wsl:
@@ -53,8 +50,6 @@ def crack_hashcat(ARGS, hash_type):
             success("Removed hashcat.potfile")
         except FileNotFoundError:
             pass
-    
-    is_wsl = os.path.exists("/mnt/c/Windows")  # Detect WSL
     
     if is_wsl:
         info("Detected WSL, using powershell.exe to crack hashes for GPU acceleration")
@@ -175,19 +170,21 @@ def crack(ARGS):
     with open(ARGS.file) as f:  # File must be a raw hash at this point
         hashes = f.read().splitlines()
     
-    multiple = 'es' if len(hashes) > 1 else ""  # Pluralize
+    multiple = '' if len(hashes) == 1 else "es"  # Pluralize
     info(f"Found {len(hashes)} hash{multiple} in '{ARGS.file}'")
+    if len(hashes) == 0:
+        error("No hashes found in file")
     
     if not ARGS.mode:  # If mode not forced
         progress("Detecting hash type...") 
         hash_type = find_hash_type(ARGS.file)
         if hash_type == None:  # Retry
-            info("Hash type was not hashcat foramt, converting from john and trying again")
+            info("Hash type was not hashcat format, converting from john and trying again")
             
              # Convert to hashcat format
             with open(ARGS.file, "r") as f:  # Read
                 hashes = f.read().splitlines()
-            
+                
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 tmp.write("\n".join(strip_john_hash(hashes)).encode())
                 
