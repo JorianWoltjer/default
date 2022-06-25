@@ -10,7 +10,7 @@ LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
 
 def progress(message):
     print(f"[{Fore.LIGHTBLUE_EX}~{Style.RESET_ALL}] {message}")
-    
+
 def error(message):
     print(f"[{Fore.LIGHTRED_EX}!{Style.RESET_ALL}] {message}")
     exit(1)
@@ -33,6 +33,16 @@ def ask(message, default=True):
             choice = "y" if default else "n"
             print(f"\033[F\033[{len(strip_ansi(question))}G {choice}")  # Place default choice in question answer
             return default
+        
+def ask_any(message, default):
+    question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {message} [{default}] "
+    choice = input(question)  # Any input
+    
+    if not choice:  # Default
+        choice = default
+        print(f"\033[F\033[{len(strip_ansi(question))}G {choice}")  # Place default choice in question answer
+        
+    return choice
 
 def command(command, error_message="Failed to execute command", highlight=False, get_output=False, **kwargs):
     print(Fore.LIGHTBLACK_EX, end="\r")
@@ -52,7 +62,7 @@ def command(command, error_message="Failed to execute command", highlight=False,
         print()
     else:
         print(Style.RESET_ALL, end="")
-    
+        
     if errored or p.returncode != 0:
         if error_message != None:
             error(error_message)

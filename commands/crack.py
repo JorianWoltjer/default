@@ -4,6 +4,7 @@ import json
 import re
 from colorama import Fore, Style
 import tempfile
+from time import sleep
 
 RAW_HASHES_EXT = [".hash", ".txt", ".hashes", ".hashcat", ".john", ""]
 NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip", "11600", "13600", "17200", "17210", "17220", "17225", "17230", "23700", "23800", "12500", "13000"]
@@ -38,7 +39,7 @@ def crack_hashcat(ARGS, hash_type):
         with open(ARGS.file, "w") as f:  # Write
             f.write("\n".join(strip_john_hash(hashes)))
     
-    is_wsl = os.path.exists("/mnt/c/Windows")  # Detect WSL
+    is_wsl = os.path.exists("/mnt/c/Windows") and not ARGS.no_wsl  # Detect WSL
     
     if ARGS.no_cache:  # Remove already cracked passwords from cache
         try:
@@ -102,32 +103,45 @@ def crack_john(ARGS, hash_type):
     return output
 
 
-def find_hash_type(file):
+def find_hash_type(ARGS, file):
     """Detect hash type using Name-That-Hash"""
     name_that_hash = command(['nth', '-g', '-f', file], get_output=True, error_message="Failed to run Name-That-Hash. Is it installed?")
     name_that_hash = json.loads(fix_json_newlines(name_that_hash))
     
-    hash_type = None
-    for hash in name_that_hash.values():
-        for detected in hash:
-            if 'hashcat' in detected:
-                if hash_type != None and hash_type != detected:  # If not first iteration, and hash type is different from previous
-                    error(f"Multiple hash types detected. Please check '{file}' and try cracking them individually.")
-                hash_type = detected
+    # If no results
+    if not name_that_hash:
+        error(f"No hashes found in '{file}'")
+    
+    # Check if all types are the same
+    hash_type = list(name_that_hash.values())[0]
+    if not all(value == hash_type for value in name_that_hash.values()):
+        error(f"Different hash types detected. Please check '{file}' and try cracking them individually.")
+        
+    # Filter out hashes that don't have hashcat or john modes
+    hash_type = list(filter(lambda d: (not ARGS.john and d['hashcat'] != None) or (ARGS.john and d['john'] != None), 
+                       hash_type))
+        
+    if len(hash_type) > 1:
+        info("Multiple compatible hash types found, choose a type to use for cracking.")
+        for i, detected in enumerate(hash_type):
+            padding = 2 - len(str(i+1))
+            print(" "*padding + f"{i+1}. {detected['name']}")
+        
+        types_lower = [detected['name'].lower() for detected in hash_type]
+        while True:
+            choice = ask_any("What type do you want to use?", default="1")
+            if choice.isnumeric() and int(choice) in range(1, len(hash_type)+1):
+                choice = int(choice)
                 break
-            elif 'john' in detected:
-                if hash_type != None and hash_type != detected:  # If not first iteration, and hash type is different from previous
-                    error(f"Multiple hash types detected. Please check '{file}' and try cracking them individually.")
-                hash_type = detected
-                if not ARGS.john:  # If only crackable with john, ask to switch to john
-                    choice = ask(f"{hash_type['name']} is only crackable with john, want to force john instead of hashcat?")
-                    if choice:
-                        ARGS.john = True
-                    else:
-                        exit(1)
+            elif choice.lower() in types_lower:
+                choice = types_lower.index(choice.lower()) + 1
                 break
-        else:
-            return None
+        
+        hash_type = hash_type[choice-1]
+    elif len(hash_type) == 1:  # If only one possible hash type
+        hash_type = hash_type[0]
+    else:  # None found
+        return None
     
     return hash_type
 
@@ -148,7 +162,7 @@ def crack(ARGS):
         progress("Extracting hash from RAR archive...")
         hash = command([f"{JOHN_RUN_PATH}/rar2john", ARGS.file], get_output=True, error_message="Could not extract hash from RAR archive")
         archive_file = ARGS.file
-    elif ext == ".zip":  # ZIP archive
+    elif ext in [".zip", ".docx", ".xlsx", ".pptx"]:  # ZIP archive
         progress("Extracting hash from ZIP archive...")
         hash = command([f"{JOHN_RUN_PATH}/zip2john", ARGS.file], get_output=True, error_message="Could not extract hash from ZIP archive")
         archive_file = ARGS.file
@@ -168,7 +182,7 @@ def crack(ARGS):
     
     # Get hashes and types
     with open(ARGS.file) as f:  # File must be a raw hash at this point
-        hashes = f.read().splitlines()
+        hashes = [l for l in f.read().splitlines() if l]  # Read non-empty lines
     
     multiple = '' if len(hashes) == 1 else "es"  # Pluralize
     info(f"Found {len(hashes)} hash{multiple} in '{ARGS.file}'")
@@ -177,7 +191,7 @@ def crack(ARGS):
     
     if not ARGS.mode:  # If mode not forced
         progress("Detecting hash type...") 
-        hash_type = find_hash_type(ARGS.file)
+        hash_type = find_hash_type(ARGS, ARGS.file)
         if hash_type == None:  # Retry
             info("Hash type was not hashcat format, converting from john and trying again")
             
@@ -188,7 +202,7 @@ def crack(ARGS):
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 tmp.write("\n".join(strip_john_hash(hashes)).encode())
                 
-            hash_type = find_hash_type(tmp.name)
+            hash_type = find_hash_type(ARGS, tmp.name)
             if hash_type == None:
                 if archive_file:
                     error(f"Could not detect hash type of '{ARGS.file}', but it should. Make sure you have the **newest** version of Name-That-Hash installed, I only added these hashes very recently.")
@@ -196,6 +210,7 @@ def crack(ARGS):
                     error(f"Could not detect hash type of '{ARGS.file}'. Try manutally setting the hash type with --mode")
             
         success(f"Detected hash type: {hash_type['name']}")
+        sleep(1)  # Wait a second to show hash type
     else:  # Force mode
         hash_type = {
             'hashcat': ARGS.mode,
@@ -257,3 +272,4 @@ parser_crack.add_argument('-o', '--output', help='Output file')
 parser_crack.add_argument('-m', '--mode', help='Force hash mode/format for hashcat or john')
 parser_crack.add_argument('-j', '--john', help='Use John the Ripper for cracking instead of hashcat', action='store_true')
 parser_crack.add_argument('-n', '--no-cache', help='Remove any cache files before running (mostly used for testing)', action='store_true')
+parser_crack.add_argument('-W', '--no-wsl', help='Disable automatic Windows Subsystem Linux detection, force local hashcat', action='store_true')
