@@ -7,7 +7,9 @@ import tempfile
 from time import sleep
 
 RAW_HASHES_EXT = [".hash", ".txt", ".hashes", ".hashcat", ".john", ""]
-NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip", "11600", "13600", "17200", "17210", "17220", "17225", "17230", "23700", "23800", "12500", "13000"]
+NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip", "office", "oldoffice"
+                    "11600", "13600", "17200", "17210", "17220", "17225", "17230", "23700", "23800", "12500", "13000", 
+                    "9400", "9500", "9600", "9700", "9710", "9800", "9810", "9820"]
 
 
 # Helper functions
@@ -162,13 +164,17 @@ def crack(ARGS):
         progress("Extracting hash from RAR archive...")
         hash = command([f"{JOHN_RUN_PATH}/rar2john", ARGS.file], get_output=True, error_message="Could not extract hash from RAR archive")
         archive_file = ARGS.file
-    elif ext in [".zip", ".docx", ".xlsx", ".pptx"]:  # ZIP archive
+    elif ext == ".zip":  # ZIP archive
         progress("Extracting hash from ZIP archive...")
         hash = command([f"{JOHN_RUN_PATH}/zip2john", ARGS.file], get_output=True, error_message="Could not extract hash from ZIP archive")
         archive_file = ARGS.file
     elif ext == ".7z":  # 7z archive
         progress("Extracting hash from 7z archive...")
         hash = command([f"{JOHN_RUN_PATH}/7z2john.pl", ARGS.file], get_output=True, error_message="Could not extract hash from 7z archive")
+        archive_file = ARGS.file
+    elif ext in [".docx", ".docm", ".doc", ".xlsx", ".xlsm", ".xls", ".xlm", ".pptx", ".pptm", ".ppt"]:  # Office document
+        progress("Extracting hash from office document...")
+        hash = command([f"{JOHN_RUN_PATH}/office2john.py", ARGS.file], get_output=True, error_message="Could not extract hash from office document")
         archive_file = ARGS.file
     elif ext not in RAW_HASHES_EXT:  # Not a raw hash either, so unknown
         error(f"Unknown file type: {ext}. Try making a hash out of it and pass the hash as the argument")
