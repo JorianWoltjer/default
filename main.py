@@ -5,25 +5,32 @@ import os
 import shlex
 import subprocess
 import re
+import importlib.util
+import pathlib
 
 LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
 
+def info(message):
+    """Print an informational message. Will be prefixed with `[*]`"""
+    print(f"[{Fore.LIGHTCYAN_EX}*{Style.RESET_ALL}] {message}")
+
 def progress(message):
+    """Print a progress message, for telling the user what is happening. Will be prefixed with `[~]`"""
     print(f"[{Fore.LIGHTBLUE_EX}~{Style.RESET_ALL}] {message}")
 
+def success(message):
+    """Print a success message, for when something completed or succeeded. Will be prefixed with `[+]`"""
+    print(f"[{Fore.LIGHTGREEN_EX}+{Style.RESET_ALL}] {message}")
+
 def error(message):
+    """Print an error message, for when something went wrong. Will be prefixed with `[-]` and will **exit the program**."""
     print(f"[{Fore.LIGHTRED_EX}!{Style.RESET_ALL}] {message}")
     exit(1)
     
-def success(message):
-    print(f"[{Fore.LIGHTGREEN_EX}+{Style.RESET_ALL}] {message}")
-
-def info(message):
-    print(f"[{Fore.LIGHTCYAN_EX}*{Style.RESET_ALL}] {message}")
-
-def ask(message, default=True):
+def ask(question, default=True):
+    """Ask a yes/no question. Will be prefixed with `[?]`. Returns `True` or `False` for yes or no. You can provide a `default=` value for when the user does not provide an answer."""
     while True:
-        question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {message} [y/n] "
+        question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {question} [y/n] "
         choice = input(question).lower()[:1]
         if choice == "y":
             return True
@@ -34,8 +41,9 @@ def ask(message, default=True):
             print(f"\033[F\033[{len(strip_ansi(question))}G {choice}")  # Place default choice in question answer
             return default
         
-def ask_any(message, default):
-    question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {message} [{default}] "
+def ask_any(question, default):
+    """Ask a question for any input the user needs to type in. Will be prefixed with `[?]`. Returns the raw input. Requires a `default` parameter for when the user does not provide an answer."""
+    question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {question} [{default}] "
     choice = input(question)  # Any input
     
     if not choice:  # Default
@@ -133,11 +141,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run commands with default arguments')
     subparsers = parser.add_subparsers(dest='command', required=True)
     
-    from commands import apk, nmap, crack
+    # Load modules
+    for module in (pathlib.Path(__file__).parent / "commands").glob('*.py'):
+        spec = importlib.util.spec_from_file_location(f"{__name__}.imported_{module.stem}" , module)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.setup(subparsers)
     
+    # Execute function for command
     ARGS = parser.parse_args()
     try:
-        ARGS.func(ARGS)  # Execute function for command
+        ARGS.func(ARGS)
     except KeyboardInterrupt:
         print()
         error("Exiting...")

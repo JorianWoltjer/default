@@ -267,15 +267,14 @@ def crack(ARGS):
             success(f"Extracted 7z archive to {basename}")
 
 
-import sys  # Import live values from main.py
-__main__ = sys.modules['__main__']
-
-parser_crack = __main__.subparsers.add_parser('crack', help='Crack a password hash')
-parser_crack.set_defaults(func=crack)
-parser_crack.add_argument('file', type=PathType(), help='File with the hash to crack (.txt or .hash for raw hashes)')
-parser_crack.add_argument('-w', '--wordlist', type=PathType(), help='Wordlist to use', default=f"{WORDLIST_PATH}/rockyou.txt")
-parser_crack.add_argument('-o', '--output', help='Output file')
-parser_crack.add_argument('-m', '--mode', help='Force hash mode/format for hashcat or john')
-parser_crack.add_argument('-j', '--john', help='Use John the Ripper for cracking instead of hashcat', action='store_true')
-parser_crack.add_argument('-n', '--no-cache', help='Remove any cache files before running (mostly used for testing)', action='store_true')
-parser_crack.add_argument('-W', '--no-wsl', help='Disable automatic Windows Subsystem Linux detection, force local hashcat', action='store_true')
+def setup(subparsers):
+    parser = subparsers.add_parser('crack', help='Crack a password hash')
+    parser.set_defaults(func=crack)
+    
+    parser.add_argument('file', type=PathType(), help='File with the hash to crack (.txt or .hash for raw hashes)')
+    parser.add_argument('-w', '--wordlist', type=PathType(), help='Wordlist to use', default=f"{WORDLIST_PATH}/rockyou.txt")
+    parser.add_argument('-o', '--output', help='Output file')
+    parser.add_argument('-m', '--mode', help='Force hash mode/format for hashcat or john')
+    parser.add_argument('-j', '--john', help='Use John the Ripper for cracking instead of hashcat', action='store_true')
+    parser.add_argument('-n', '--no-cache', help='Remove any cache files before running (mostly used for testing)', action='store_true')
+    parser.add_argument('-W', '--no-wsl', help='Disable automatic Windows Subsystem Linux detection, force local hashcat', action='store_true')

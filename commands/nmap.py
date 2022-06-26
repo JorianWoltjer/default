@@ -81,16 +81,15 @@ def nmap(ARGS):
     success(f"Completed ('{ARGS.ip}' -> '{ARGS.output}')")
 
 
-import sys  # Import live values from main.py
-__main__ = sys.modules['__main__']
-
-parser_nmap = __main__.subparsers.add_parser('nmap', help='Scan a network with nmap')
-parser_nmap.set_defaults(func=nmap)
-parser_nmap.add_argument('ip', help='IP address to scan (can be a range in CIDR notation)')
-parser_nmap.add_argument('-o', '--output', help='Output file', default="nmap.txt")
-parser_nmap.add_argument('-a', '--all', help="Scan all ports (0-65535)", action='store_true')
-parser_nmap.add_argument('-s', '--slow', help="Slow scan (slower but more thorough)", action='store_true')
-parser_nmap.add_argument('-m', '--masscan', help="Use Masscan to find ports, then send to nmap (sudo needed)", action='store_true')
-scan_type_group = parser_nmap.add_mutually_exclusive_group()
-scan_type_group.add_argument('-c', '--connect', help="Use TCP Connect scan type (no sudo needed)", action='store_true')
-scan_type_group.add_argument('-u', '--udp', help="Scan for UDP ports", action='store_true')
+def setup(subparsers):
+    parser = subparsers.add_parser('nmap', help='Scan a network with nmap')
+    parser.set_defaults(func=nmap)
+    
+    parser.add_argument('ip', help='IP address to scan (can be a range in CIDR notation)')
+    parser.add_argument('-o', '--output', help='Output file', default="nmap.txt")
+    parser.add_argument('-a', '--all', help="Scan all ports (0-65535)", action='store_true')
+    parser.add_argument('-s', '--slow', help="Slow scan (slower but more thorough)", action='store_true')
+    parser.add_argument('-m', '--masscan', help="Use Masscan to find ports, then send to nmap (sudo needed)", action='store_true')
+    scan_type_group = parser.add_mutually_exclusive_group()
+    scan_type_group.add_argument('-c', '--connect', help="Use TCP Connect scan type (no sudo needed)", action='store_true')
+    scan_type_group.add_argument('-u', '--udp', help="Scan for UDP ports", action='store_true')

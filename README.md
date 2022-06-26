@@ -18,6 +18,8 @@ Similar to bash function, these actions just execute bash commands under the hoo
 default <command> [<action>] [<args>]
 ```
 
+For instruction on creating your own modules/commands, see the [`README.md` in `commands`](commands/README.md). 
+
 ## Examples
 
 ### APK
