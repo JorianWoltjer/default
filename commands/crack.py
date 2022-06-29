@@ -41,7 +41,7 @@ def crack_hashcat(ARGS, hash_type):
         with open(ARGS.file, "w") as f:  # Write
             f.write("\n".join(strip_john_hash(hashes)))
     
-    is_wsl = os.path.exists("/mnt/c/Windows") and not ARGS.no_wsl  # Detect WSL
+    is_wsl = detect_wsl() and not ARGS.no_wsl  # Detect WSL
     
     if ARGS.no_cache:  # Remove already cracked passwords from cache
         try:

@@ -41,7 +41,7 @@ def decompile(ARGS):
         apk_type = "C#"
         info("Detected C#")
         progress(f"Decompressing '{ARGS.output}.zip/assemblies'...")
-        from lib.xamarin_decompress import decompress
+        from lib.xamarin_decompress import decompress  # Local lib/ folder
         success_count = decompress(f"{ARGS.output}.zip/assemblies")
         success(f"Decompressed {success_count} C# assemblies ('{ARGS.output}.zip/assemblies')")
     

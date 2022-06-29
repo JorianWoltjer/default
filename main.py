@@ -2,47 +2,53 @@
 import argparse
 from argparse import ArgumentTypeError
 from colorama import Fore, Style
+from pyfiglet import figlet_format
 import os
 import shlex
 import subprocess
+import signal
 import re
 import importlib.util
 import pathlib
 import termios, sys, tty
+import select
 
 LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
 
 def info(message):
     """Print an informational message. Will be prefixed with `[*]`"""
-    print(f"[{Fore.LIGHTCYAN_EX}*{Style.RESET_ALL}] {message}")
+    print(f"{Style.RESET_ALL}[{Fore.LIGHTCYAN_EX}*{Style.RESET_ALL}] {message}")
 
 def progress(message):
     """Print a progress message, for telling the user what is happening. Will be prefixed with `[~]`"""
-    print(f"[{Fore.LIGHTBLUE_EX}~{Style.RESET_ALL}] {message}")
+    print(f"{Style.RESET_ALL}[{Fore.LIGHTBLUE_EX}~{Style.RESET_ALL}] {message}")
 
 def success(message):
     """Print a success message, for when something completed or succeeded. Will be prefixed with `[+]`"""
-    print(f"[{Fore.LIGHTGREEN_EX}+{Style.RESET_ALL}] {message}")
+    print(f"{Style.RESET_ALL}[{Fore.LIGHTGREEN_EX}+{Style.RESET_ALL}] {message}")
 
 def error(message):
     """Print an error message, for when something went wrong. Will be prefixed with `[-]` and will **exit the program**."""
-    print(f"[{Fore.LIGHTRED_EX}!{Style.RESET_ALL}] {message}")
+    print(f"{Style.RESET_ALL}[{Fore.LIGHTRED_EX}!{Style.RESET_ALL}] {message}")
     exit(1)
-    
+
 def ask(question, default=True):
     """Ask a yes/no question. Will be prefixed with `[?]`. Returns `True` or `False` for yes or no. You can provide a `default=` value for when the user does not provide an answer."""
+    y_or_n = "Y/n" if default else "y/N"
+    colored_question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {question} [{y_or_n}] "
+    print(colored_question, end="", flush=True)  # Print question
     while True:
-        y_or_n = "Y/n" if default else "y/N"
-        colored_question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {question} [{y_or_n}] "
-        choice = input_without_newline(colored_question, length=1).lower()
-        if choice == "y":
-            return True
-        elif choice == "n":
-            return False
-        elif choice in ["\r", "\n"]:  # Default
-            choice = "y" if default else "n"
-            print(f"\033[F\033[{len(strip_ansi(colored_question))}G {choice}")  # Place default choice in question answer
-            return default
+        choice = input_without_newline(1).lower()
+        if choice in ["y", "n", "\r", "\n"]:
+            print()
+            break
+    
+    if choice in ["\r", "\n"]:  # Default
+        choice = "y" if default else "n"
+    
+    print(f"\033[F\033[{len(strip_ansi(colored_question))}G {choice}")  # Place default choice in question answer
+    
+    return choice == "y"  # True if y, False if n
 
 def ask_any(question, default):
     """Ask a question for any input the user needs to type in. Will be prefixed with `[?]`. Returns the raw input. Requires a `default` parameter for when the user does not provide an answer."""
@@ -55,37 +61,53 @@ def ask_any(question, default):
         
     return choice
 
-def command(command, error_message="Failed to execute command", highlight=False, get_output=False, **kwargs):
+def command(command, error_message="Failed to execute command", highlight=False, get_output=False, interact_fg=False, **kwargs):
+    if get_output and interact_fg:  # Popen cannot get output
+        raise Exception("Cannot get output from a foreground process")
+    if interact_fg:  # Highlight automatically if interacting in foreground
+        highlight = True
+    
     print(Fore.LIGHTBLACK_EX, end="\r")
+    command = [str(c) for c in command]
     print("$", " ".join(shlex.quote(c) for c in command))
     if highlight:  
         print(Style.RESET_ALL, end="\r")
     
-    errored = False
     try:
-        p = subprocess.run(command, stdout=subprocess.PIPE if get_output else None, stderr=subprocess.PIPE if get_output else None, 
+        if interact_fg:
+            returncode = run_as_fg_process(command, **kwargs)
+        else:
+            p = subprocess.run(command, stdout=subprocess.PIPE if get_output else None, stderr=subprocess.PIPE if get_output else None, 
                            **kwargs)
+            returncode = p.returncode
     except FileNotFoundError as e:
         print(e)
-        errored = True
+        returncode = 1  # Error
     
     if highlight:
         print()
     else:
         print(Style.RESET_ALL, end="")
-        
-    if errored or p.returncode != 0:
-        if error_message != None:
-            error(error_message)
-        
-    return p.stdout
+    
+    if returncode not in [0, -2] and error_message != None:
+        error(error_message)
+    if get_output:
+        return p.stdout
+
+def detect_wsl():
+    """Detect if program is running in Windows Subsystem Linux. Useful for automatically setting certain options in that case. Returns `True` or `False`"""
+    try:
+        with open("/proc/version") as f:
+            return "WSL" in f.read()
+    except FileNotFoundError:
+        return False
+
 
 def strip_ansi(source):
     return re.sub(r'\033\[(\d|;)+?m', '', source)
 
-def input_without_newline(question, length):
+def input_without_newline(length):
     """Get user input without having to press enter"""
-    print(question, end="", flush=True)  # Print question
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
     try:
@@ -97,8 +119,33 @@ def input_without_newline(question, length):
     if response == b"\x03":  # Ctrl+C
         raise KeyboardInterrupt
     
-    print(response.decode())
     return response.decode()
+
+def run_as_fg_process(*args, **kwargs):
+    old_pgrp = os.tcgetpgrp(sys.stdin.fileno())
+    old_attr = termios.tcgetattr(sys.stdin.fileno())
+
+    user_preexec_fn = kwargs.pop("preexec_fn", None)
+
+    def new_pgid():
+        if user_preexec_fn:
+            user_preexec_fn()
+        
+        os.setpgid(os.getpid(), os.getpid())
+    try:
+        child = subprocess.Popen(*args, preexec_fn=new_pgid,
+                                 **kwargs)
+        os.tcsetpgrp(sys.stdin.fileno(), child.pid)
+        os.kill(child.pid, signal.SIGCONT)
+        ret = child.wait()
+
+    finally:
+        hdlr = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
+        os.tcsetpgrp(sys.stdin.fileno(), old_pgrp)
+        signal.signal(signal.SIGTTOU, hdlr)
+        termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, old_attr)
+
+    return ret
 
 class PathType(object):  # From: https://stackoverflow.com/a/33181083/10508498
     def __init__(self, exists=True, type='file', dash_ok=True):
@@ -168,10 +215,14 @@ if __name__ == '__main__':
         spec.loader.exec_module(module)
         module.setup(subparsers)
     
-    # Execute function for command
     ARGS = parser.parse_args()
     try:
-        ARGS.func(ARGS)
+        # Banner
+        command_name = ARGS.command.replace("_", " ").capitalize()
+        print(Fore.CYAN + figlet_format("Default", font="standard").rstrip())  # Title
+        print(f"{Fore.LIGHTBLACK_EX}{command_name:>34}{Style.RESET_ALL}\n")  # Subtitle
+        
+        ARGS.func(ARGS)  # Execute function for command
     except KeyboardInterrupt:
         print()
         error("Exiting...")

@@ -77,3 +77,4 @@ With the first `from main import *` line you imported all the useful function fr
 * `ask(question)`: Ask a yes/no question. Will be prefixed with `[?]`. Returns `True` or `False` for yes or no. You can provide a `default=` parameter for when the user does not provide an answer. 
 * `ask_any(question)`: Ask a question for any input the user needs to type in. Will be prefixed with `[?]`. Returns the raw input. Requires a `default` parameter for when the user does not provide an answer.
 * `command(command)`: Run the specified system command. Needs to be passed as a list of arguments like `["uname", "-a"]`. Prints the command and output in gray, unless `highlight=` is set to `True`. The output of the command is only returned if `get_output=` is set to `True`.
+* `detect_wsl()`: Detect if program is running in Windows Subsystem Linux. Useful for automatically setting certain options in that case. Returns `True` or `False`

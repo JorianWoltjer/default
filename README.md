@@ -12,6 +12,9 @@ Similar to bash function, these actions just execute bash commands under the hoo
 * `default nmap`: Scan a network or IP address quickly for open ports with nmap
 * `default crack`: Crack password protected files and hashes with hashcat and John the Ripper
 
+> **Warning**
+> This tool is not made to be restricted, so attacks like command injection exist in this tool. Do not let lower privilaged users run this tool with higher rights (setuid), because they can easily get a shell with the higher privilages. 
+
 ## Usage
 
 ```Shell
@@ -103,5 +106,3 @@ sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar
 ## TODO:
 
 - [ ] Add `ffuf` command for web fuzzing (`path`, `parameter`, `vhost`)
-- [ ] Add `hydra` command for brute-forcing (`ssh`)
-- [ ] Add `listener` command for creating a listener for connections
