@@ -8,6 +8,7 @@ import subprocess
 import re
 import importlib.util
 import pathlib
+import termios, sys, tty
 
 LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
 
@@ -31,15 +32,16 @@ def error(message):
 def ask(question, default=True):
     """Ask a yes/no question. Will be prefixed with `[?]`. Returns `True` or `False` for yes or no. You can provide a `default=` value for when the user does not provide an answer."""
     while True:
-        question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {question} [y/n] "
-        choice = input(question).lower()[:1]
+        y_or_n = "Y/n" if default else "y/N"
+        colored_question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {question} [{y_or_n}] "
+        choice = input_without_newline(colored_question, length=1).lower()
         if choice == "y":
             return True
         elif choice == "n":
             return False
-        elif choice == "":  # Default
+        elif choice in ["\r", "\n"]:  # Default
             choice = "y" if default else "n"
-            print(f"\033[F\033[{len(strip_ansi(question))}G {choice}")  # Place default choice in question answer
+            print(f"\033[F\033[{len(strip_ansi(colored_question))}G {choice}")  # Place default choice in question answer
             return default
 
 def ask_any(question, default):
@@ -80,6 +82,23 @@ def command(command, error_message="Failed to execute command", highlight=False,
 
 def strip_ansi(source):
     return re.sub(r'\033\[(\d|;)+?m', '', source)
+
+def input_without_newline(question, length):
+    """Get user input without having to press enter"""
+    print(question, end="", flush=True)  # Print question
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        response = sys.stdin.read(length).encode()  # Read `length` bytes
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    
+    if response == b"\x03":  # Ctrl+C
+        raise KeyboardInterrupt
+    
+    print(response.decode())
+    return response.decode()
 
 class PathType(object):  # From: https://stackoverflow.com/a/33181083/10508498
     def __init__(self, exists=True, type='file', dash_ok=True):
