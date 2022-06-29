@@ -3,3 +3,4 @@ name-that-hash
 netifaces
 pyfiglet
 pwncat-cs
+pyngrok

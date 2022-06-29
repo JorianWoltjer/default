@@ -1,5 +1,6 @@
 from main import *
 import socket
+from pyngrok import ngrok
 from lib import wsl_sudo  # Local lib/ folder
 
 def get_ip():  # Get WSL IP from interface
@@ -22,7 +23,18 @@ def already_in_portproxy(ip, port):
     return (str(port), ip) in matches
 
 
-def ask_create_portproxy(ARGS):  # Should be at the start of all listen actions
+def create_forwarding(ARGS):  # Should be at the start of all listen actions
+    if ARGS.ngrok:
+        protocol = "http" if ARGS.action == "http" else "tcp"
+        
+        progress(f"Creating ngrok tunnel to port {ARGS.port}")
+        if hasattr(ARGS, 'udp') and ARGS.udp:
+            warning("ngrok does not support UDP, defaulting to TCP")
+        
+        tunnel = ngrok.connect(ARGS.port, protocol)
+        success(f"Successfully created ngrok tunnel from {tunnel.public_url}/ to {protocol}://localhost:{ARGS.port}/")
+        return  # No need for portproxy if ngrok is used already
+    
     is_wsl = detect_wsl()
     ip = get_ip()
     if is_wsl and not already_in_portproxy(ip, ARGS.port):  # No need to ask
@@ -30,30 +42,17 @@ def ask_create_portproxy(ARGS):  # Should be at the start of all listen actions
             progress(f"Forwarding port {ARGS.port} to {ip}...")
             wsl_as_admin(f"netsh interface portproxy set v4tov4 {ARGS.port} {ip}")
             success(f"Port {ARGS.port} is now forwarded to WSL")
-            return True
+            ARGS.forward = "wsl"  # Save for later
 
-def ask_remove_portproxy(ARGS):  # Should be at the end of all listen actions
-    if ask(f"Port {ARGS.port} was forwarded to WSL for listener, do you want to remove the rule now?"):
-        wsl_as_admin(f"netsh interface portproxy delete v4tov4 {ARGS.port}")
-        success("Successfully removed forwarding rule")
+def remove_forwarding(ARGS):  # Should be at the end of all listen actions
+    if hasattr(ARGS, 'forward') and ARGS.forward == "wsl":
+        if ask(f"Port {ARGS.port} was forwarded to WSL for listener, do you want to remove the rule now?"):
+            wsl_as_admin(f"netsh interface portproxy delete v4tov4 {ARGS.port}")
+            success("Successfully removed forwarding rule")
 
-
-def listen_http(ARGS):
-    portproxy_enabled = ask_create_portproxy(ARGS)
-    
-    directory = f"'{ARGS.directory}'" if ARGS.directory != "." else "current directory"
-    progress(f"Starting HTTP server on http://{ARGS.ip}:{ARGS.port}/ and serving files in {directory}")
-    info("Ctrl+C to exit")
-    command(["python3", "-m", "http.server", str(ARGS.port), "-b", ARGS.ip, "-d", ARGS.directory], 
-            interact_fg=True, error_message="Failed to start HTTP server")
-
-    success("Closed HTTP server")
-    
-    if portproxy_enabled:
-        ask_remove_portproxy(ARGS)
 
 def listen_nc(ARGS):
-    portproxy_enabled = ask_create_portproxy(ARGS)
+    create_forwarding(ARGS)
     
     protocol = "udp" if ARGS.udp else "tcp"
     progress(f"Starting listener on {protocol}://{ARGS.ip}:{ARGS.port}/...")
@@ -82,9 +81,21 @@ def listen_nc(ARGS):
     
     success("Closed listener")
     
-    if portproxy_enabled:
-        ask_remove_portproxy(ARGS)
+    remove_forwarding(ARGS)
 
+def listen_http(ARGS):
+    create_forwarding(ARGS)
+    
+    directory = f"'{ARGS.directory}'" if ARGS.directory != "." else "current directory"
+    progress(f"Starting HTTP server on http://{ARGS.ip}:{ARGS.port}/ and serving files in {directory}")
+    info("Ctrl+C to exit")
+    command(["python3", "-m", "http.server", str(ARGS.port), "-b", ARGS.ip, "-d", ARGS.directory], 
+            interact_fg=True, error_message="Failed to start HTTP server")
+
+    success("Closed HTTP server")
+    
+    remove_forwarding(ARGS)
+        
 
 def setup(subparsers):
     parser = subparsers.add_parser('listen', help='Create network listeners')
@@ -99,9 +110,9 @@ def setup(subparsers):
     
     parser_http = parser_subparsers.add_parser('http', help='Listen for HTTP connections and serve a directory as the content')
     parser_http.set_defaults(func=listen_http)
-    parser_http.add_argument('directory', nargs='?', default=".", help='The directory to serve as content')
+    parser_http.add_argument('directory', type=PathType(type='dir'), nargs='?', default=".", help='The directory to serve as content')
     parser_http.add_argument('-p', '--port', type=int, default=8000, help='The port to listen on')
     
     for p in [parser_nc, parser_http]:  # Add arguments to all actions
         p.add_argument('-i', '--ip', default="0.0.0.0", help='The IP address to listen on. Will only accept connections specifically to this IP address')
-        # p.add_argument('-n', '--ngrok', action="store_true", help="Use ngrok to create a public subdomain that points to the localhost port")
+        p.add_argument('-n', '--ngrok', action="store_true", help="Use ngrok to create a public subdomain that points to the localhost port")

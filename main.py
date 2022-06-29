@@ -11,7 +11,6 @@ import re
 import importlib.util
 import pathlib
 import termios, sys, tty
-import select
 
 LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
 
