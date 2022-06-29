@@ -27,6 +27,10 @@ def success(message):
     """Print a success message, for when something completed or succeeded. Will be prefixed with `[+]`"""
     print(f"{Style.RESET_ALL}[{Fore.LIGHTGREEN_EX}+{Style.RESET_ALL}] {message}")
 
+def warning(message):
+    """Print a warning message, for warning the user about something, but not directly exiting. Will be prefixed with `[!]`"""
+    print(f"{Style.RESET_ALL}[{Fore.YELLOW}!{Style.RESET_ALL}] {message}")
+
 def error(message):
     """Print an error message, for when something went wrong. Will be prefixed with `[-]` and will **exit the program**."""
     print(f"{Style.RESET_ALL}[{Fore.LIGHTRED_EX}!{Style.RESET_ALL}] {message}")
@@ -93,6 +97,8 @@ def command(command, error_message="Failed to execute command", highlight=False,
         error(error_message)
     if get_output:
         return p.stdout
+    else:
+        return returncode
 
 def detect_wsl():
     """Detect if program is running in Windows Subsystem Linux. Useful for automatically setting certain options in that case. Returns `True` or `False`"""
