@@ -69,8 +69,8 @@ default crack hash.txt --john
 ```Shell
 git clone https://github.com/JorianWoltjer/default.git
 cd default
-pip install -r requirements.txt
-alias default="python3 /path/to/default/main.py"  # Add to your ~/.bashrc
+pip install -r requirements.txt  # Install requirements
+sudo ln -s $(pwd)/main.py /usr/bin/default  # Put `default` into PATH
 default -h
 ```
 

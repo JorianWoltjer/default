@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import argparse
 from argparse import ArgumentTypeError
 from colorama import Fore, Style
@@ -40,7 +41,7 @@ def ask(question, default=True):
             choice = "y" if default else "n"
             print(f"\033[F\033[{len(strip_ansi(question))}G {choice}")  # Place default choice in question answer
             return default
-        
+
 def ask_any(question, default):
     """Ask a question for any input the user needs to type in. Will be prefixed with `[?]`. Returns the raw input. Requires a `default` parameter for when the user does not provide an answer."""
     question = f"[{Fore.LIGHTYELLOW_EX}?{Style.RESET_ALL}] {question} [{default}] "
@@ -142,7 +143,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='command', required=True)
     
     # Load modules
-    for module in (pathlib.Path(__file__).parent / "commands").glob('*.py'):
+    for module in (pathlib.Path(os.path.realpath(__file__)).parent / "commands").glob('*.py'):
         spec = importlib.util.spec_from_file_location(f"{__name__}.imported_{module.stem}" , module)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
