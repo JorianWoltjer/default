@@ -78,6 +78,8 @@ sudo ln -s $(pwd)/main.py /usr/bin/default  # Put `default` into PATH
 default -h
 ```
 
+Then there are a few things left to configure in [config.py](config.py). I am planning to make this a setup script at some point, but for now just put the correct values for your setup in here.
+
 ## Dependencies
 
 ```Shell

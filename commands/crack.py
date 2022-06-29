@@ -1,5 +1,5 @@
 from main import *
-from config import JOHN_RUN_PATH, WORDLIST_PATH, HASHCAT_WINDOWS_PATH
+from config import JOHN_RUN_PATH, PASSWORD_WORDLIST, HASHCAT_WINDOWS_PATH
 import json
 import re
 from colorama import Fore, Style
@@ -272,7 +272,7 @@ def setup(subparsers):
     parser.set_defaults(func=crack)
     
     parser.add_argument('file', type=PathType(), help='File with the hash to crack (.txt or .hash for raw hashes)')
-    parser.add_argument('-w', '--wordlist', type=PathType(), help='Wordlist to use', default=f"{WORDLIST_PATH}/rockyou.txt")
+    parser.add_argument('-w', '--wordlist', type=PathType(), help='Wordlist to use', default=PASSWORD_WORDLIST)
     parser.add_argument('-o', '--output', help='Output file')
     parser.add_argument('-m', '--mode', help='Force hash mode/format for hashcat or john')
     parser.add_argument('-j', '--john', help='Use John the Ripper for cracking instead of hashcat', action='store_true')
