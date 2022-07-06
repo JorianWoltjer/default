@@ -20,7 +20,7 @@ Similar to bash scripts, these actions just execute bash commands under the hood
 default <command> [<action>] [<args>]
 ```
 
-For detailed instruction on creating your **own** modules/commands, see the [`README.md` in `commands`](commands/README.md). 
+For detailed instruction on creating your **own** modules/commands, see the [`README.md` in `commands/`](commands/README.md). 
 
 ## Examples
 
@@ -52,7 +52,7 @@ For detailed instruction on creating your **own** modules/commands, see the [`RE
 
 ### Listen
 
-* `default listen nc`
+* `default listen nc 1337`
 
 [![Default Example: Netcat listener](https://asciinema.org/a/XpZU2JcJbtZxTC7LdVuBYhTQl.svg)](https://asciinema.org/a/XpZU2JcJbtZxTC7LdVuBYhTQl?autoplay=1)
 
@@ -102,6 +102,8 @@ sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar
 ### Cracking
 
 * A [**modified** version of **Name-That-Hash**](https://github.com/JorianWoltjer/Name-That-Hash), with added hashes recognition for multiple types of archives (ZIP, RAR, etc.). At the time of writing the [Pull Request](https://github.com/HashPals/Name-That-Hash/pull/138) is not yet accepted, and I will update this README when it is included. For the time being use my fork if you want to use the archive cracking features. 
+* [**hashcat**](https://hashcat.net/hashcat/) as the default cracking tool for hashes
+* [**john**](https://github.com/openwall/john) for cracking passwords with the `--john` option
 
 ### Listen
 
