@@ -54,7 +54,7 @@ For detailed instruction on creating your **own** modules/commands, see the [`RE
 
 * `default listen nc 1337`
 
-[![Default Example: Netcat listener](https://asciinema.org/a/XpZU2JcJbtZxTC7LdVuBYhTQl.svg)](https://asciinema.org/a/XpZU2JcJbtZxTC7LdVuBYhTQl?autoplay=1)
+[![Default Example: Netcat listener](https://asciinema.org/a/tIsAawiGLwtFTrKe3hC1wL4zE.svg)](https://asciinema.org/a/tIsAawiGLwtFTrKe3hC1wL4zE?autoplay=1)
 
 * `default listen http`
 
