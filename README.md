@@ -7,11 +7,9 @@ As I personally use Windows Subsystem Linux (WSL), all modules have this in mind
 
 Similar to bash scripts, these actions just execute bash commands under the hood, with nice-looking output. It was made to be easily customizable by just adding new commands to the [`commands/`](commands/) directory. I've added 4 modules/commands that I personally use already. 
 
-**Features:**
+**Modules:**
 
-* `default apk decompile`: Decompile an APK file into an APK source folder
-* `default apk create_keystore`: Create a keystore file with a password
-* `default apk build`: Build, align and sign an APK source folder into an APK file
+* `default apk`: Decompile an APK for analysing and rebuild it back into an APK
 * `default nmap`: Scan a network or IP address quickly for open ports with nmap
 * `default crack`: Crack password protected files and hashes with hashcat and John the Ripper
 * `default listen`: Create network listeners and forward certain connections to your listener
@@ -22,7 +20,7 @@ Similar to bash scripts, these actions just execute bash commands under the hood
 default <command> [<action>] [<args>]
 ```
 
-For detailed instruction on creating your own modules/commands, see the [`README.md` in `commands`](commands/README.md). 
+For detailed instruction on creating your **own** modules/commands, see the [`README.md` in `commands`](commands/README.md). 
 
 ## Examples
 
