@@ -1,6 +1,14 @@
 from main import *
 import os
 
+
+def to_apk_name(folder):
+    apk_name = folder[:-1] if folder[-1] == "/" else folder  # Remove trailing slash
+    apk_name.replace(" ", "_")  # Replace spaces with underscores
+    apk_name = os.path.basename(apk_name)  # Get the last folder name
+    return apk_name
+
+
 def decompile(ARGS):
     ARGS.output = os.path.splitext(ARGS.file)[0] if ARGS.output is None else ARGS.output
     apk_type = "Java/Smali"  # Default
@@ -47,31 +55,20 @@ def decompile(ARGS):
     
     success(f"Completed ('{ARGS.file}' -> {apk_type})")
 
-
-def create_keystore(ARGS):
-    if os.path.exists(os.path.expanduser(ARGS.output)):
-        choice = ask(f"Keystore '{ARGS.output}' already exists, do you want to overwrite it?")
+def build(ARGS):
+    # Create keystore file if it doesn't exist yet
+    if not os.path.exists(os.path.expanduser(ARGS.keystore)):
+        choice = ask(f"Keystore file '{ARGS.keystore}' not found, do you want to create a new one?")
         if choice:
-            os.remove(os.path.expanduser(ARGS.output))
+            ARGS.keystore = ask_any("Where do you want to save the keystore file?", default=ARGS.keystore)
+            ARGS.password = ask_any("What should be the password for the keystore file?", default=ARGS.password)
+            progress(f"Creating keystore file...")
+            command(['keytool', '-genkey', '-noprompt', '-dname', 'CN=, OU=, O=, L=, S=, C=', '-keystore', os.path.expanduser(ARGS.keystore), '-alias', 'apk', '-keyalg', 'RSA', '-storepass', ARGS.password, '-keypass', ARGS.password], 
+                    error_message="Failed to create keystore file")
+            
+            success(f"Keystore file created ('{ARGS.keystore}')")
         else:
             exit(1)
-    
-    progress(f"Creating keystore file...")
-    command(['keytool', '-genkey', '-noprompt', '-dname', 'CN=, OU=, O=, L=, S=, C=', '-keystore', os.path.expanduser(ARGS.output), '-alias', 'apk', '-keyalg', 'RSA', '-storepass', ARGS.password, '-keypass', ARGS.password], 
-            error_message="Failed to create keystore file")
-    
-    success(f"Keystore file created ('{ARGS.output}')")
-
-
-def to_apk_name(folder):
-    apk_name = folder[:-1] if folder[-1] == "/" else folder  # Remove trailing slash
-    apk_name.replace(" ", "_")  # Replace spaces with underscores
-    apk_name = os.path.basename(apk_name)  # Get the last folder name
-    return apk_name
-
-def build(ARGS):
-    if not os.path.exists(os.path.expanduser(ARGS.keystore)):
-        error("Keystore file not found, create one with 'default apk create_keystore'")
     
     apk_name = to_apk_name(ARGS.folder)
     built_apk = os.path.join(ARGS.folder, 'dist', apk_name + '.apk')
@@ -125,15 +122,10 @@ def setup(subparsers):
     parser_decompile.add_argument('file', type=PathType(), help='APK file to decompile')
     parser_decompile.add_argument('-o', '--output', help='Output folder')
     
-    parser_create_keystore = parser_subparsers.add_parser('create_keystore', help='Create a keystore file for APK signing')
-    parser_create_keystore.set_defaults(func=create_keystore)
-    parser_create_keystore.add_argument('-o', '--output', help='Output keystore file location', default="~/apk.keystore")
-    parser_create_keystore.add_argument('-p', '--password', help='Keystore password', default="password")
-    
     parser_build = parser_subparsers.add_parser('build', help='Build APK file')
     parser_build.set_defaults(func=build)
     parser_build.add_argument('folder', help='Input APK source folder', type=PathType(type='dir'))
-    parser_build.add_argument('-k', '--keystore', help='Keystore file location', default="~/apk.keystore")
+    parser_build.add_argument('-k', '--keystore', help='Keystore file location', default="apk.keystore")
     parser_build.add_argument('-p', '--password', help='Keystore password', default="password")
     parser_build.add_argument('-o', '--output', help='Output APK file')  # Final output gets copied to output argument
     parser_build.add_argument('-v', '--version', help='Sign using specific APK Signature version', type=int, choices=range(1, 4),  metavar="[1-3]")
