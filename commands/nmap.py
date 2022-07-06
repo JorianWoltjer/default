@@ -24,7 +24,7 @@ def nmap(ARGS):
     if os.path.exists(ARGS.output):
         choice = ask(f"Nmap output file '{ARGS.output}' already exists, do you want to overwrite it?")
         if choice:
-            os.remove(ARGS.output)
+            pass  # Nmap will overwrite itself later
         else:
             exit(1)
                 

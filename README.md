@@ -28,45 +28,43 @@ For detailed instruction on creating your own modules/commands, see the [`README
 
 ### APK
 
-```Shell
-default apk decompile click_me.apk
-```
+* `default apk decompile seethesharpflag.apk`
 
-<img src="https://user-images.githubusercontent.com/26067369/167905287-52fe9a11-4d1b-4e9b-9209-7e36eeda1971.png" width="800" alt="Screenshot of decompiling APK">
+[![Default Example: decompile C# APK](https://asciinema.org/a/hEDUJNUkZideirH6Z2VcE3WKF.svg)](https://asciinema.org/a/hEDUJNUkZideirH6Z2VcE3WKF?autoplay=1)
 
-```Shell
-default apk create_keystore -o test.keystore --password j0r1an
-```
+* `default apk build click_me`
 
-<img src="https://user-images.githubusercontent.com/26067369/167904317-55940be3-2a56-463a-a4a5-856bb307238c.png" width="800" alt="Screenshot of creating keystore">
-
-```Shell
-default apk build click_me -o new.apk -k test.keystore -p j0r1an
-```
-
-<img src="https://user-images.githubusercontent.com/26067369/167902777-01b8de55-e371-48d7-b304-5e031ee2a07c.png" width="800" alt="Screenshot of building APK">
+[![Default Example: rebuild APK](https://asciinema.org/a/lMlBrtsY2BRAiKC3GmSJswYMN.svg)](https://asciinema.org/a/lMlBrtsY2BRAiKC3GmSJswYMN?autoplay=1)
 
 ### Nmap
 
-```Shell
-default nmap scanme.nmap.org --top
-```
+* `default nmap scanme.nmap.org`
 
-<img src="https://user-images.githubusercontent.com/26067369/169713168-e030914e-2665-4ac6-bf76-c5efbd3bb535.png" width="800" alt="Screenshot of nmap scan on scanme.nmap.org">
+[![Default Example: nmap scanme.nmap.org](https://asciinema.org/a/zDJRJWEOwQ3S5cY4Cb8zPTUdv.svg)](https://asciinema.org/a/zDJRJWEOwQ3S5cY4Cb8zPTUdv?autoplay=1)
 
 ### Cracking
 
-```Shell
-default crack archive.rar
-```
+* `default crack archive.zip`
 
-<img src="https://cdn.discordapp.com/attachments/901100796316356639/983047063346499685/default_crack_zip.gif" width="800" alt="GIF animation of cracking a RAR archive using hashcat in WSL">
+[![Default Example: crack .zip archive](https://asciinema.org/a/uyARfOc0CWz0yCmLoZDbxjjKK.svg)](https://asciinema.org/a/uyARfOc0CWz0yCmLoZDbxjjKK?autoplay=1)
 
-```Shell
-default crack hash.txt --john
-```
+* `default crack netntlm.txt` & `default crack hashes.txt`
 
-<img src="https://user-images.githubusercontent.com/26067369/172061551-63801284-b227-4ea8-9fe1-cee595cca68b.png" width="800" alt="Screenshot of cracking a SHA256 hash using John the Ripper">
+[![Default Example: crack NTLM and SHA256 hashes](https://asciinema.org/a/pgEoqrqYP4Bqj4AV8ao8BSy2H.svg)](https://asciinema.org/a/pgEoqrqYP4Bqj4AV8ao8BSy2H?autoplay=1)
+
+### Listen
+
+* `default listen nc`
+
+[![Default Example: Netcat listener](https://asciinema.org/a/XpZU2JcJbtZxTC7LdVuBYhTQl.svg)](https://asciinema.org/a/XpZU2JcJbtZxTC7LdVuBYhTQl?autoplay=1)
+
+* `default listen http`
+
+[![Default Example: HTTP server](https://asciinema.org/a/XbDgCx6Z7JjOY5Sct6WWyr4HF.svg)](https://asciinema.org/a/XbDgCx6Z7JjOY5Sct6WWyr4HF?autoplay=1)
+
+* `default listen dns`
+
+[![Default Example: DNS server](https://asciinema.org/a/Ge4Wd96aboFsZaEXvDeJ7WZ1l.svg)](https://asciinema.org/a/Ge4Wd96aboFsZaEXvDeJ7WZ1l?autoplay=1)
 
 ## Installation
 
@@ -85,7 +83,8 @@ Then there are a few things left to configure in [config.py](config.py). I am pl
 ```Shell
 sudo apt-get install apktool apksigner zipalign  # Install APK tools
 sudo apt-get install nmap masscan  # Install network tools
-# <Download latest release of dex2jar from https://github.com/pxb1988/dex2jar/releases>
+pip install git+https://github.com/JorianWoltjer/Name-That-Hash.git  # Temporary fork of name-that-hash
+# *Download latest release of dex2jar from https://github.com/pxb1988/dex2jar/releases manually*
 sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar to PATH
 ```
 

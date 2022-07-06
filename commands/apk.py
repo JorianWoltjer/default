@@ -125,7 +125,7 @@ def setup(subparsers):
     parser_build = parser_subparsers.add_parser('build', help='Build APK file')
     parser_build.set_defaults(func=build)
     parser_build.add_argument('folder', help='Input APK source folder', type=PathType(type='dir'))
-    parser_build.add_argument('-k', '--keystore', help='Keystore file location', default="apk.keystore")
+    parser_build.add_argument('-k', '--keystore', help='Keystore file location', default="~/apk.keystore")
     parser_build.add_argument('-p', '--password', help='Keystore password', default="password")
     parser_build.add_argument('-o', '--output', help='Output APK file')  # Final output gets copied to output argument
     parser_build.add_argument('-v', '--version', help='Sign using specific APK Signature version', type=int, choices=range(1, 4),  metavar="[1-3]")

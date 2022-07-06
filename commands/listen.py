@@ -127,7 +127,6 @@ def listen_http(ARGS):
 
 def listen_dns(ARGS):
     create_forwarding(ARGS)
-    progress(f"Listening for DNS on udp://{ARGS.ip}:{ARGS.port}/")
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
     try:
@@ -136,10 +135,12 @@ def listen_dns(ARGS):
         warning(f"Permission denied listening on port {ARGS.port}")
         choice = ask(f"Do you want to allow all low ports until next reboot?")
         if choice:  # Add rule that allows any user to use any port (resets on boot)
-            command(["sudo", "sysctl", f"net.ipv4.ip_unprivileged_port_start={ARGS.port}"])
+            command(["sudo", "sysctl", f"net.ipv4.ip_unprivileged_port_start=0"], highlight=True)
+            sock.bind((ARGS.ip, ARGS.port))  # Try creating socket on port again
         else:
             exit(1)
     
+    progress(f"Listening for DNS on udp://{ARGS.ip}:{ARGS.port}/")
     sock.setblocking(0)
     
     try:
