@@ -14,25 +14,25 @@ import termios, sys, tty
 
 LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
 
-def info(message):
+def info(message, *args):
     """Print an informational message. Will be prefixed with `[*]`"""
-    print(f"{Style.RESET_ALL}[{Fore.LIGHTCYAN_EX}*{Style.RESET_ALL}] {message}")
+    print(f"{Style.RESET_ALL}[{Fore.LIGHTCYAN_EX}*{Style.RESET_ALL}] {message}", *args)
 
-def progress(message):
+def progress(message, *args):
     """Print a progress message, for telling the user what is happening. Will be prefixed with `[~]`"""
-    print(f"{Style.RESET_ALL}[{Fore.LIGHTBLUE_EX}~{Style.RESET_ALL}] {message}")
+    print(f"{Style.RESET_ALL}[{Fore.LIGHTBLUE_EX}~{Style.RESET_ALL}] {message}", *args)
 
-def success(message):
+def success(message, *args):
     """Print a success message, for when something completed or succeeded. Will be prefixed with `[+]`"""
-    print(f"{Style.RESET_ALL}[{Fore.LIGHTGREEN_EX}+{Style.RESET_ALL}] {message}")
+    print(f"{Style.RESET_ALL}[{Fore.LIGHTGREEN_EX}+{Style.RESET_ALL}] {message}", *args)
 
-def warning(message):
+def warning(message, *args):
     """Print a warning message, for warning the user about something, but not directly exiting. Will be prefixed with `[!]`"""
-    print(f"{Style.RESET_ALL}[{Fore.YELLOW}!{Style.RESET_ALL}] {message}")
+    print(f"{Style.RESET_ALL}[{Fore.YELLOW}!{Style.RESET_ALL}] {message}", *args)
 
-def error(message):
+def error(message, *args):
     """Print an error message, for when something went wrong. Will be prefixed with `[-]` and will **exit the program**."""
-    print(f"{Style.RESET_ALL}[{Fore.LIGHTRED_EX}!{Style.RESET_ALL}] {message}")
+    print(f"{Style.RESET_ALL}[{Fore.LIGHTRED_EX}!{Style.RESET_ALL}] {message}", *args)
     exit(1)
 
 def ask(question, default=True):
