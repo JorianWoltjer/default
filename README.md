@@ -81,9 +81,12 @@ sudo ln -s $(pwd)/main.py /usr/bin/default  # Put `default` into PATH
 default -h
 ```
 
-Then there are a few things left to configure in [config.py](config.py). I am planning to make this a setup script at some point, but for now just put the correct values for your setup in here.
+Then there are a few things left to configure in [config.py](config.py). I am planning to make this a setup script at some point, but for now just put the correct values for your setup in here.  
+Also make sure to install the other [Dependencies](#dependencies) to use certain modules.
 
 ## Dependencies
+
+Some included modules require external tools to be installed. Follow the commands below to install the necessary tools for all modules. 
 
 ```Shell
 sudo apt-get install apktool apksigner zipalign  # Install APK tools
@@ -114,7 +117,7 @@ sudo ln -s /path/to/dex2jar/d2j-dex2jar.sh /usr/local/bin/dex2jar  # Add dex2jar
 
 ### Listen
 
-* [**pwncat**](https://github.com/calebstewart/pwncat) for creating a `pwncat` listener, that automatically upgrades a reverse shell to bash and has loads more nice features like uploading files. Included in [`requirements.txt`](requirements.txt), but cloud cause some errors because the [listen.py](commands/listen.py) expects `python3.9`.
+* [**pwncat**](https://github.com/calebstewart/pwncat) for creating a `pwncat` listener, that automatically upgrades a reverse shell to bash and has loads more nice features like uploading files. Included in [`requirements.txt`](requirements.txt), but could cause some errors because the [listen.py](commands/listen.py) expects `python3.9`.
 
 ## TODO:
 
