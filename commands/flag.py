@@ -14,8 +14,8 @@ def normalize_prefix(prefix):
 
 def get_encoded_length(s, in_bits, out_bits):
     """Get the length of the encoded value that can be used (last few characters may vary, this function solves that)"""
-    s_bits = len(s) * in_bits  # 8 bits per byte
-    encoded_len = s_bits // out_bits  # Floored division to get maximum length
+    s_bits = len(s) * in_bits  # 8 bits per character
+    encoded_len = s_bits // out_bits  # Split into 5/6 bit per character
     return encoded_len
 
 

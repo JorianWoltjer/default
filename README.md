@@ -67,9 +67,9 @@ For detailed instruction on creating your **own** modules/commands, see the [`RE
 
 ### Flag
 
-* `default flag CTF`
+* `default flag`
 
-[![Default Example: DNS server](https://asciinema.org/a/BN74FBnJiR6UweqQwEp4aSho1.svg)](https://asciinema.org/a/BN74FBnJiR6UweqQwEp4aSho1?autoplay=1)
+[![Default Example: Search CTF flags](https://asciinema.org/a/Z6cUIICIShWVElHErz579MU7B.svg)](https://asciinema.org/a/Z6cUIICIShWVElHErz579MU7B?autoplay=1)
 
 ## Installation
 
