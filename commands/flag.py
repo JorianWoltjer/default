@@ -2,20 +2,6 @@ from main import *
 from config import FLAG_PREFIXES
 from base64 import b64encode, b32encode
 
-
-def search(ARGS, value):
-    if type(value) == bytes:  # Decode if bytes
-        value = value.decode()
-        
-    grep_args = []
-
-    if ARGS.context != None:
-        grep_args += ["-o", "-P"]  # Show match only, and use perl regex
-        value = f".{{0,{ARGS.context}}}{re.escape(value)}.{{0,{ARGS.context}}}"
-    
-    grep_args += ["-a"] if ARGS.all else []  # Match binary (all) files
-
-    command(["grep", "--color=always", "-r", *grep_args, value], highlight=True, error_message=None)
     
 def normalize_prefix(prefix):
     if "{" in prefix or "}" in prefix:
@@ -26,6 +12,12 @@ def normalize_prefix(prefix):
     prefix += "{}"
     return prefix
 
+def get_encoded_length(s, in_bits, out_bits):
+    """Get the length of the encoded value that can be used (last few characters may vary, this function solves that)"""
+    s_bits = len(s) * in_bits  # 8 bits per byte
+    encoded_len = s_bits // out_bits  # Floored division to get maximum length
+    return encoded_len
+
 
 def flag(ARGS):
     global FLAG_PREFIXES
@@ -35,31 +27,43 @@ def flag(ARGS):
         
     FLAG_PREFIXES = [normalize_prefix(p) for p in FLAG_PREFIXES]
     
-    info(f"Searching for flags with the following formats:", ', '.join(FLAG_PREFIXES))
     
     for prefix in FLAG_PREFIXES:
+        progress(f"Searching for flags with {prefix} format")
+
         prefix = prefix[:-1]  # Remove trailing }
+        search = []
         
         # Plain
-        progress(f"Searching for '{prefix}'")
-        search(ARGS, prefix)
+        search.append(prefix)
+        info(f"- {search[-1]!r}")
         # Reversed
-        progress(f"Searching for reversed '{prefix}'")
-        search(ARGS, prefix[::-1])
+        search.append(prefix[::-1])
+        info(f"- Reversed {search[-1]!r}")
         
-        # TODO: Find out how many characters we can search max
         # Base64 encoded
-        progress(f"Searching for base64 '{prefix}'")
-        base64_prefix = b64encode(prefix.encode()).replace(b"=", b"")
-        base64_prefix = base64_prefix[:len(base64_prefix) - len(base64_prefix) % 4]  # Cut off last unfinished chunk
-        search(ARGS, base64_prefix)
+        length = get_encoded_length(prefix, 8, 6)  # Base64 translates 8 bits to 6 bits
+        search.append(b64encode(prefix.encode()).decode()[:length])
+        info(f"- Base64 {search[-1]!r}")
         # Base32 encoded
-        progress(f"Searching for base32 '{prefix}'")
-        base32_prefix = b32encode(prefix.encode()).replace(b"=", b"")
-        base32_prefix = base32_prefix[:len(base32_prefix) - len(base32_prefix) % 7]  # Cut off last unfinished chunk
-        if len(prefix) < 5:  # Unsure about last character
-            base32_prefix = base32_prefix[:-1]
-        search(ARGS, base32_prefix)
+        length = get_encoded_length(prefix, 8, 5)  # Base32 translates 8 bits to 5 bits
+        search.append(b32encode(prefix.encode()).decode()[:length])
+        info(f"- Base32 {search[-1]!r}")
+        
+        # Do regex search
+        grep_args = []
+        
+        search = '|'.join(re.escape(s) for s in search)
+
+        if ARGS.context != None:
+            grep_args += ["-o"]  # Show match only, and use perl regex
+            search = f".{{0,{ARGS.context}}}({search}).{{0,{ARGS.context}}}"
+        
+        grep_args += ["-a"] if ARGS.all else []  # Match binary (all) files
+
+        command(["grep", "--color=always", "-rE", *grep_args, search], highlight=True, error_message=None)
+    
+    success("Completed search")
 
 
 def setup(subparsers):
