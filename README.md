@@ -5,7 +5,7 @@ Some commands or actions are a bit complicated or longwinded, which isn't ideal 
 The idea of this tool is to set a lot of **default** arguments for commands, so you only have to provide a minimal amount of arguments to have it do what you want. I made this tool mostly for Cybersecurity Capture The Flag (CTF) challenges. There is even a `flag` command for searching flags in various encodings. There is often some overlap in challenges where you have to do a common task a lot. It's annoying to have to look up the command every time or type out a whole thing checking everything is correct. This tool can quickly do those common things.  
 As I use Windows Subsystem Linux (WSL) myself, all modules have this in mind and change some things up automatically when in WSL to improve the usability. 
 
-Similar to bash scripts, these actions just execute bash commands under the hood, with nice-looking output. It was made to be easily customizable by just adding new commands to the [`commands/`](commands/) directory. I've added 5 useful modules/commands already. 
+Similar to bash scripts, these actions just execute bash commands under the hood, with nice-looking output. It was made to be easily customizable by just adding new commands to the [`commands/`](default/commands/) directory. I've added 5 useful modules/commands already. 
 
 **Modules:**
 
@@ -21,7 +21,7 @@ Similar to bash scripts, these actions just execute bash commands under the hood
 default <command> [<action>] [<args>]
 ```
 
-For detailed instruction on creating your **own** modules/commands, see the [`README.md` in `commands/`](commands/README.md). 
+For detailed instruction on creating your **own** modules/commands, see the [`README.md` in `commands/`](default/commands/README.md). 
 
 ## Examples
 
@@ -37,7 +37,7 @@ python3 setup_dependencies.py  # Interactive script to set up all dependencies f
 default --help
 ```
 
-The `setup_dependencies.py` asks about configuration as well, but if you ever want to change these later you can change the values in [`default/config.json`](default/config.json). More about these options in [Dependencies](#configjson)
+The `setup_dependencies.py` asks about configuration as well, but if you ever want to change these later you can change the values in [`config.json`](default/config.json). More about these options in [Dependencies](#configjson)
 
 ## Dependencies
 
@@ -65,7 +65,7 @@ After installing everything a successful output should only contain `[~]` and `[
 * [**apksigner**](https://developer.android.com/studio/command-line/apksigner) to sign an APK
 * [**zipalign**](https://developer.android.com/studio/command-line/zipalign) to align an APK
 * [**dex2jar**](https://github.com/pxb1988/dex2jar) to convert a `classes.dex` file to a JAR file
-* [**xamarin-decompress**](https://github.com/NickstaDB/xamarin-decompress) to decompress DLL files (already included in [`/lib`](/lib))
+* [**xamarin-decompress**](https://github.com/NickstaDB/xamarin-decompress) to decompress DLL files (already included in [`lib/`](default/lib))
 
 ### Nmap
 
@@ -80,7 +80,7 @@ After installing everything a successful output should only contain `[~]` and `[
 
 ### Listen
 
-* [**pwncat**](https://github.com/calebstewart/pwncat) for creating a `pwncat` listener, that automatically upgrades a reverse shell to bash and has loads more nice features like uploading files. Included in [`requirements.txt`](requirements.txt), but could cause some errors because the [listen.py](commands/listen.py) expects `python3.9`.
+* [**pwncat**](https://github.com/calebstewart/pwncat) for creating a `pwncat` listener, that automatically upgrades a reverse shell to bash and has loads more nice features like uploading files. Included in [`requirements.txt`](requirements.txt), but could cause some errors because the [listen.py](default/commands/listen.py) expects `python3.9`.
 
 ## TODO
 
