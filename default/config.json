@@ -1,0 +1,12 @@
+{
+    "completed_setup": true,
+    "john_path": "/tool/john",
+    "hashcat_windows_path": "C:\\Program Files\\hashcat-6.2.5",
+    "password_list": "/list/rockyou.txt",
+    "flag_prefixes": [
+        "CTF",
+        "ctf",
+        "flag",
+        "HTB"
+    ]
+}

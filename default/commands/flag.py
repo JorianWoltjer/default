@@ -1,5 +1,4 @@
-from main import *
-from config import FLAG_PREFIXES
+from default.main import *
 from base64 import b64encode, b32encode
 
     
@@ -20,15 +19,15 @@ def get_encoded_length(s, in_bits, out_bits):
 
 
 def flag(ARGS):
-    global FLAG_PREFIXES
-    
     if ARGS.prefix:  # If specified
-        FLAG_PREFIXES = [ARGS.prefix]
-        
-    FLAG_PREFIXES = [normalize_prefix(p) for p in FLAG_PREFIXES]
+        flag_prefixes = [ARGS.prefix]
+    else:
+        flag_prefixes = CONFIG.flag_prefixes
+    
+    flag_prefixes = [normalize_prefix(p) for p in flag_prefixes]
     
     
-    for prefix in FLAG_PREFIXES:
+    for prefix in flag_prefixes:
         progress(f"Searching for flags with {prefix} format")
 
         prefix = prefix[:-1]  # Remove trailing }
@@ -55,7 +54,7 @@ def flag(ARGS):
         
         search = '|'.join(re.escape(s) for s in search)
 
-        if ARGS.context != None:
+        if ARGS.context is not None:
             grep_args += ["-o"]  # Show match only, and use perl regex
             search = f".{{0,{ARGS.context}}}({search}).{{0,{ARGS.context}}}"
         
@@ -70,6 +69,6 @@ def setup(subparsers):
     parser = subparsers.add_parser('flag', help='Do various simple searches for CTF flags to catch low hanging fruit')
     parser.set_defaults(func=flag)
     
-    parser.add_argument('prefix', nargs='?', help=f"Prefix of flag in a CTF{{flag}} format (default: {', '.join(FLAG_PREFIXES)})")
+    parser.add_argument('prefix', nargs='?', help=f"Prefix of flag in a CTF{{flag}} format (default: {', '.join(CONFIG.flag_prefixes)})")
     parser.add_argument('--all', '-a', action='store_true', help="Match and print binary files (adds -a to grep)")
     parser.add_argument('--context', '-c', type=int, help="Limit amount of characters to show around match, useful if a file with very long lines matches")

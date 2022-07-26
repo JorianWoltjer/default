@@ -1,6 +1,5 @@
 colorama
 netifaces
 pyfiglet
-pwncat-cs
 dnslib
 pyngrok

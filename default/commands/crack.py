@@ -1,5 +1,4 @@
-from main import *
-from config import JOHN_RUN_PATH, PASSWORD_WORDLIST, HASHCAT_WINDOWS_PATH
+from default.main import *
 import json
 import re
 from colorama import Fore, Style
@@ -14,7 +13,7 @@ NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip", "office", "oldoffice"
 
 # Helper functions
 def wslpath(path):
-    if path == None:
+    if path is None:
         return None
     
     return command(["wslpath", "-w", path], get_output=True).strip().decode()
@@ -41,12 +40,12 @@ def crack_hashcat(ARGS, hash_type):
         with open(ARGS.file, "w") as f:  # Write
             f.write("\n".join(strip_john_hash(hashes)))
     
-    is_wsl = detect_wsl() and not ARGS.no_wsl  # Detect WSL
+    windows_hashcat = detect_wsl() and not ARGS.no_wsl and CONFIG.hashcat_windows_path is not None  # Detect WSL
     
     if ARGS.no_cache:  # Remove already cracked passwords from cache
         try:
-            if is_wsl:
-                file = f"'{HASHCAT_WINDOWS_PATH}\\hashcat.potfile'"
+            if windows_hashcat:
+                file = f"'{CONFIG.hashcat_windows_path}\\hashcat.potfile'"
                 command(["powershell.exe", f"if (test-path {file}) {{ rm {file} }}"])
             else:
                 os.remove(os.path.expanduser("~/.hashcat/hashcat.potfile"))
@@ -54,14 +53,14 @@ def crack_hashcat(ARGS, hash_type):
         except FileNotFoundError:
             pass
     
-    if is_wsl:
+    if windows_hashcat:
         info("Detected WSL, using powershell.exe to crack hashes for GPU acceleration")
         ARGS.file = wslpath(ARGS.file)
         ARGS.wordlist = wslpath(ARGS.wordlist)
         ARGS.output = wslpath(ARGS.output)
         output_args = f"--outfile {ARGS.output}" if ARGS.output else ""
         progress("Cracking hashes...")
-        command(["powershell.exe", "-c", f"cd '{HASHCAT_WINDOWS_PATH}'; hashcat -m {hash_type['hashcat']} '{ARGS.file}' '{ARGS.wordlist}' {output_args}"], 
+        command(["powershell.exe", "-c", f"cd '{CONFIG.hashcat_windows_path}'; hashcat -m {hash_type['hashcat']} '{ARGS.file}' '{ARGS.wordlist}' {output_args}"], 
                 highlight=True, error_message=None)
     else:
         output_args = ["--outfile", ARGS.output] if ARGS.output else []
@@ -70,8 +69,8 @@ def crack_hashcat(ARGS, hash_type):
                 highlight=True, error_message=None)
     
     success("Finished cracking hashes. Results:")
-    if is_wsl:
-        output = command(["powershell.exe", "-c", f"cd '{HASHCAT_WINDOWS_PATH}'; hashcat --show -m {hash_type['hashcat']} '{ARGS.file}'"], 
+    if windows_hashcat:
+        output = command(["powershell.exe", "-c", f"cd '{CONFIG.hashcat_windows_path}'; hashcat --show -m {hash_type['hashcat']} '{ARGS.file}'"], 
                 get_output=True, error_message="Failed to crack hashes")
     else:
         output = command(["hashcat", "--show", "-m", str(hash_type['hashcat']), ARGS.file], 
@@ -88,16 +87,16 @@ def crack_john(ARGS, hash_type):
     """Crack hashes using John the Ripper"""
     if ARGS.no_cache:  # Remove already cracked passwords from cache
         try:
-            os.remove(os.path.expanduser(f"{JOHN_RUN_PATH}/john.pot"))
+            os.remove(os.path.expanduser(f"{CONFIG.john_path}/run/john.pot"))
             success("Removed john.pot")
         except FileNotFoundError:
             pass
     
     progress("Cracking hashes...")
-    command([f'{JOHN_RUN_PATH}/john', f"--wordlist={ARGS.wordlist}", f"--format={hash_type['john']}", ARGS.file], highlight=True)
+    command([f'{CONFIG.john_path}/run/john', f"--wordlist={ARGS.wordlist}", f"--format={hash_type['john']}", ARGS.file], highlight=True)
 
     success("Finished cracking hashes. Results:")
-    output = command([f'{JOHN_RUN_PATH}/john', '--show', f"--format={hash_type['john']}", ARGS.file], get_output=True)
+    output = command([f'{CONFIG.john_path}/run/john', '--show', f"--format={hash_type['john']}", ARGS.file], get_output=True)
     if ARGS.output:
         with open(ARGS.output, "wb") as f:
             f.write(output)
@@ -120,7 +119,7 @@ def find_hash_type(ARGS, file):
         error(f"Different hash types detected. Please check '{file}' and try cracking them individually.")
         
     # Filter out hashes that don't have hashcat or john modes
-    hash_type = list(filter(lambda d: (not ARGS.john and d['hashcat'] != None) or (ARGS.john and d['john'] != None), 
+    hash_type = list(filter(lambda d: (not ARGS.john and d['hashcat'] is not None) or (ARGS.john and d['john'] is not None), 
                        hash_type))
         
     if len(hash_type) > 1:
@@ -162,19 +161,19 @@ def crack(ARGS):
     archive_file = None
     if ext == ".rar":  # RAR archive
         progress("Extracting hash from RAR archive...")
-        hash = command([f"{JOHN_RUN_PATH}/rar2john", ARGS.file], get_output=True, error_message="Could not extract hash from RAR archive")
+        hash = command([f"{CONFIG.john_path}/run/rar2john", ARGS.file], get_output=True, error_message="Could not extract hash from RAR archive")
         archive_file = ARGS.file
     elif ext == ".zip":  # ZIP archive
         progress("Extracting hash from ZIP archive...")
-        hash = command([f"{JOHN_RUN_PATH}/zip2john", ARGS.file], get_output=True, error_message="Could not extract hash from ZIP archive")
+        hash = command([f"{CONFIG.john_path}/run/zip2john", ARGS.file], get_output=True, error_message="Could not extract hash from ZIP archive")
         archive_file = ARGS.file
     elif ext == ".7z":  # 7z archive
         progress("Extracting hash from 7z archive...")
-        hash = command([f"{JOHN_RUN_PATH}/7z2john.pl", ARGS.file], get_output=True, error_message="Could not extract hash from 7z archive")
+        hash = command([f"{CONFIG.john_path}/run/7z2john.pl", ARGS.file], get_output=True, error_message="Could not extract hash from 7z archive")
         archive_file = ARGS.file
     elif ext in [".docx", ".docm", ".doc", ".xlsx", ".xlsm", ".xls", ".xlm", ".pptx", ".pptm", ".ppt"]:  # Office document
         progress("Extracting hash from office document...")
-        hash = command([f"{JOHN_RUN_PATH}/office2john.py", ARGS.file], get_output=True, error_message="Could not extract hash from office document")
+        hash = command([f"{CONFIG.john_path}/run/office2john.py", ARGS.file], get_output=True, error_message="Could not extract hash from office document")
         archive_file = ARGS.file
     elif ext not in RAW_HASHES_EXT:  # Not a raw hash either, so unknown
         error(f"Unknown file type: {ext}. Try making a hash out of it and pass the hash as the argument")
@@ -198,7 +197,7 @@ def crack(ARGS):
     if not ARGS.mode:  # If mode not forced
         progress("Detecting hash type...") 
         hash_type = find_hash_type(ARGS, ARGS.file)
-        if hash_type == None:  # Retry
+        if hash_type is None:  # Retry
             info("Hash type was not hashcat format, converting from john and trying again")
             
              # Convert to hashcat format
@@ -209,11 +208,11 @@ def crack(ARGS):
                 tmp.write("\n".join(strip_john_hash(hashes)).encode())
                 
             hash_type = find_hash_type(ARGS, tmp.name)
-            if hash_type == None:
+            if hash_type is None:
                 if archive_file:
                     error(f"Could not detect hash type of '{ARGS.file}', but it should. Make sure you have the **newest** version of Name-That-Hash installed, I only added these hashes very recently.")
                 else:
-                    error(f"Could not detect hash type of '{ARGS.file}'. Try manutally setting the hash type with --mode")
+                    error(f"Could not detect hash type of '{ARGS.file}'. Try manually setting the hash type with --mode")
             
         success(f"Detected hash type: {hash_type['name']}")
         sleep(1)  # Wait a second to show hash type
@@ -272,9 +271,9 @@ def setup(subparsers):
     parser.set_defaults(func=crack)
     
     parser.add_argument('file', type=PathType(), help='File with the hash to crack (.txt or .hash for raw hashes)')
-    parser.add_argument('-w', '--wordlist', type=PathType(), help='Wordlist to use', default=PASSWORD_WORDLIST)
+    parser.add_argument('-w', '--wordlist', type=PathType(), help='Wordlist to use', default=CONFIG.password_list)
     parser.add_argument('-o', '--output', help='Output file')
     parser.add_argument('-m', '--mode', help='Force hash mode/format for hashcat or john')
     parser.add_argument('-j', '--john', help='Use John the Ripper for cracking instead of hashcat', action='store_true')
     parser.add_argument('-n', '--no-cache', help='Remove any cache files before running (mostly used for testing)', action='store_true')
-    parser.add_argument('-W', '--no-wsl', help='Disable automatic Windows Subsystem Linux detection, force local hashcat', action='store_true')
+    parser.add_argument('-W', '--no-wsl', help='Disable automatic Windows Subsystem Linux detection, force linux hashcat', action='store_true')

@@ -3,6 +3,9 @@ import argparse
 from argparse import ArgumentTypeError
 from colorama import Fore, Style
 from pyfiglet import figlet_format
+from types import SimpleNamespace
+from shutil import which
+import json
 import os
 import shlex
 import subprocess
@@ -12,7 +15,11 @@ import importlib.util
 import pathlib
 import termios, sys, tty
 
+from pygments import highlight
+
+DIR = os.path.dirname(os.path.realpath(__file__))
 LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
+CONFIG = SimpleNamespace(**json.load(open(f"{DIR}/config.json")))
 
 def info(message, *args):
     """Print an informational message. Will be prefixed with `[*]`"""
@@ -64,14 +71,14 @@ def ask_any(question, default):
         
     return choice
 
-def command(command, error_message="Failed to execute command", highlight=False, get_output=False, interact_fg=False, **kwargs):
+def command(command, *, error_message="Failed to execute command", highlight=False, get_output=False, interact_fg=False, **kwargs):
     if get_output and interact_fg:  # Popen cannot get output
         raise Exception("Cannot get output from a foreground process")
     if interact_fg:  # Highlight automatically if interacting in foreground
         highlight = True
     
     print(Fore.LIGHTBLACK_EX, end="\r")
-    command = [str(c) for c in command]
+    command = [os.path.expanduser(str(c)) for c in command]  # Convert to string and expand '~'
     print("$", " ".join(shlex.quote(c) for c in command))
     if highlight:  
         print(Style.RESET_ALL, end="\r")
@@ -92,7 +99,7 @@ def command(command, error_message="Failed to execute command", highlight=False,
     else:
         print(Style.RESET_ALL, end="")
     
-    if returncode not in [0, -2] and error_message != None:
+    if returncode not in [0, -2] and error_message is not None:
         error(error_message)
     if get_output:
         return p.stdout
@@ -103,7 +110,7 @@ def detect_wsl():
     """Detect if program is running in Windows Subsystem Linux. Useful for automatically setting certain options in that case. Returns `True` or `False`"""
     try:
         with open("/proc/version") as f:
-            return "WSL" in f.read()
+            return "WSL" in f.read() and which("powershell.exe")  # If WSL in /proc/version and powershell.exe exists
     except FileNotFoundError:
         return False
 
@@ -209,7 +216,8 @@ class PathType(object):  # From: https://stackoverflow.com/a/33181083/10508498
 
         return string
 
-if __name__ == '__main__':
+
+def main():
     parser = argparse.ArgumentParser(description='Run commands with default arguments')
     subparsers = parser.add_subparsers(dest='command', required=True)
     
@@ -227,7 +235,18 @@ if __name__ == '__main__':
         print(Fore.CYAN + figlet_format("Default", font="standard").rstrip())  # Title
         print(f"{Fore.LIGHTBLACK_EX}{command_name:>34}{Style.RESET_ALL}\n")  # Subtitle
         
+        if not CONFIG.completed_setup:
+            info("Setup was not done yet. It's recommended to run setup_dependencies.py first to set up all the dependencies and configuration")
+            if ask("Do you want to run the setup script now?"):
+                print()
+                import setup_dependencies
+                setup_dependencies.main()
+                print()
+
         ARGS.func(ARGS)  # Execute function for command
     except KeyboardInterrupt:
         print()
         error("Exiting...")
+
+if __name__ == '__main__':
+    main()

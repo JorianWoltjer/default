@@ -1,9 +1,9 @@
-from main import *
+from default.main import *
+from default.lib import wsl_sudo
 import socket
 from pyngrok import ngrok
 from dnslib import DNSRecord, DNSHeader, RR, QTYPE, A, AAAA
 import ipaddress
-from lib import wsl_sudo  # Local lib/ folder
 
 def get_ip():  # Get WSL IP from interface
     import netifaces
@@ -93,7 +93,7 @@ def listen_nc(ARGS):
             warning("UDP not supported for pwncat, defaulting back to TCP")
         if ARGS.repeat:
             warning(f"Cannot repeat pwncat. Start another listener in pwncat shell with 'listen -m linux {ARGS.port}'")
-        if ARGS.ip:
+        if ARGS.ip != "0.0.0.0":
             warning("Cannot bind to specific IP address with pwncat, defaulting to all interfaces (0.0.0.0)")
         
         command(["python3.9", "-m", "pwncat", "-lp", ARGS.port], interact_fg=True, 

@@ -1,4 +1,4 @@
-from main import *
+from default.main import *
 import json
 import os
 from socket import gethostbyname
@@ -37,7 +37,7 @@ def nmap(ARGS):
         for ip in results:
             ports += [str(p["port"]) for p in ip["ports"]]
     
-    nmap_args = ['-Pn', '-n', '-sV', '-sC']  # Default
+    nmap_args = ['-Pn', '-n', '-sV', '-sC', '-vv']  # Default
     sudo = True
     
     # https://nmap.org/book/man-output.html

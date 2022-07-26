@@ -1,5 +1,7 @@
-from main import *
+from default.main import *
+from default.lib.xamarin_decompress import decompress
 import os
+import glob
 
 
 def to_apk_name(folder):
@@ -27,12 +29,14 @@ def decompile(ARGS):
     success(f"Unzipped '{ARGS.file}' ('{ARGS.output}.zip')")
     
     # Extract java code from smali
-    progress(f"Extracting jar from '{ARGS.output}.zip/classes.dex'...")
-    command(['dex2jar', '-f', f"{ARGS.output}.zip/classes.dex", '-o', f"{ARGS.output}-tmp.jar"],
-            error_message=f"Failed to extract jar from '{ARGS.output}.zip/classes.dex'")
-    command(['unzip', '-qo', f"{ARGS.output}-tmp.jar", '-d', f"{ARGS.output}.jar"],
+    for dexfile in glob.glob(f"{ARGS.output}.zip/classes*.dex"):
+        progress(f"Extracting jar from '{dexfile}'...")
+        command([f"{LIBRARY_DIR}/dex-tools/d2j-dex2jar.sh", '-f', f"{dexfile}", '-o', f"{ARGS.output}-tmp.jar"],
+            error_message=f"Failed to extract jar from '{dexfile}'")
+        command(['unzip', '-qo', f"{ARGS.output}-tmp.jar", '-d', f"{ARGS.output}.jar"],
             error_message=f"Failed to unzip '{ARGS.output}-tmp.jar'")
-    os.remove(f"{ARGS.output}-tmp.jar")
+        os.remove(f"{ARGS.output}-tmp.jar")
+    
     success(f"Extracted jar ('{ARGS.output}.jar')")
     
     # Decompile if React Native bundle
@@ -49,7 +53,6 @@ def decompile(ARGS):
         apk_type = "C#"
         info("Detected C#")
         progress(f"Decompressing '{ARGS.output}.zip/assemblies'...")
-        from lib.xamarin_decompress import decompress  # Local lib/ folder
         success_count = decompress(f"{ARGS.output}.zip/assemblies")
         success(f"Decompressed {success_count} C# assemblies ('{ARGS.output}.zip/assemblies')")
     
