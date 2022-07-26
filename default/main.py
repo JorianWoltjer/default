@@ -241,8 +241,8 @@ def main():
                 print()
                 import setup_dependencies
                 setup_dependencies.main()
-                print()
-
+                os.execv(sys.argv[0], sys.argv)  # Run again
+                
         ARGS.func(ARGS)  # Execute function for command
     except KeyboardInterrupt:
         print()
