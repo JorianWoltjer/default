@@ -66,6 +66,7 @@ After installing everything a successful output should only contain `[~]` and `[
 * [**zipalign**](https://developer.android.com/studio/command-line/zipalign) to align an APK
 * [**dex2jar**](https://github.com/pxb1988/dex2jar) to convert a `classes.dex` file to a JAR file
 * [**xamarin-decompress**](https://github.com/NickstaDB/xamarin-decompress) to decompress DLL files (already included in [`lib/`](default/lib))
+* [**procyon-decompiler**](https://github.com/mstrobel/procyon) to decompile `.class` files into `.java` source code
 
 ### Nmap
 

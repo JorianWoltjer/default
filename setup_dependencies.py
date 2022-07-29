@@ -34,24 +34,26 @@ def is_valid_john(path):
 
 
 def main():
-    apt_dependencies = [
-        "apktool",
-        "apksigner",
-        "zipalign",
-        "nmap",
-        "masscan",
-        "unzip",
-        "hashcat"
-    ]
+    apt_dependencies = {
+       # which        apt
+        "procyon":   "procyon-decompiler",
+        "apktool":   "apktool",
+        "apksigner": "apksigner",
+        "zipalign":  "zipalign",
+        "nmap":      "nmap",
+        "masscan":   "masscan",
+        "unzip":     "unzip",
+        "hashcat":   "hashcat",
+    }
 
     progress("Checking installed apt packages...")
     not_installed = []
-    for tool in apt_dependencies:
+    for tool in apt_dependencies.keys():
         if which(tool):
             success(f"{tool} is already installed")
         else:
             warning(f"{tool} is not yet installed")
-            not_installed.append(tool)
+            not_installed.append(apt_dependencies[tool])
     
     if not_installed:  # If any dependencies missing
         progress("Some packages missing, installing with apt...")
@@ -170,11 +172,6 @@ def main():
 
     if not CONFIG.completed_setup:
         save_config("completed_setup", True)
-
-    """TODO:
-    - set config.json to null on push to github
-    - Check all strings with grammarly
-    """
 
 if __name__ == "__main__":
     try:

@@ -1,7 +1,6 @@
 from default.main import *
 from default.lib.xamarin_decompress import decompress
 import os
-import glob
 
 
 def to_apk_name(folder):
@@ -28,17 +27,12 @@ def decompile(ARGS):
             error_message=f"Failed to unzip '{ARGS.file}'")
     success(f"Unzipped '{ARGS.file}' ('{ARGS.output}.zip')")
     
-    # Extract java code from smali
-    for dexfile in glob.glob(f"{ARGS.output}.zip/classes*.dex"):
-        progress(f"Extracting jar from '{dexfile}'...")
-        command([f"{LIBRARY_DIR}/dex-tools/d2j-dex2jar.sh", '-f', f"{dexfile}", '-o', f"{ARGS.output}-tmp.jar"],
-            error_message=f"Failed to extract jar from '{dexfile}'")
-        command(['unzip', '-qo', f"{ARGS.output}-tmp.jar", '-d', f"{ARGS.output}.jar"],
-            error_message=f"Failed to unzip '{ARGS.output}-tmp.jar'")
-        os.remove(f"{ARGS.output}-tmp.jar")
-    
+    # Extract JAR from classes.dex
+    progress(f"Extracting jar from '{ARGS.file}'...")
+    command([f"{LIBRARY_DIR}/dex-tools/d2j-dex2jar.sh", '-f', ARGS.file, '-o', f"{ARGS.output}.jar"],
+            error_message=f"Failed to extract JAR")
     success(f"Extracted jar ('{ARGS.output}.jar')")
-    
+
     # Decompile if React Native bundle
     if os.path.exists(f"{ARGS.output}.zip/assets/index.android.bundle"):
         apk_type = "React Native"
@@ -55,6 +49,13 @@ def decompile(ARGS):
         progress(f"Decompressing '{ARGS.output}.zip/assemblies'...")
         success_count = decompress(f"{ARGS.output}.zip/assemblies")
         success(f"Decompressed {success_count} C# assemblies ('{ARGS.output}.zip/assemblies')")
+    
+    # Decopmile Java class files to source code
+    if apk_type == "Java/Smali":  # If no special language found
+        progress(f"Decompiling '{ARGS.output}.jar'... (this could take some time)")
+        command(["procyon", f"{ARGS.output}.jar", "-o", f"{ARGS.output}.java"], get_output=True,
+                error_message="Failed to decompile JAR")
+        success(f"Decompiled JAR to Java source code ('{ARGS.output}.java')")
     
     success(f"Completed ('{ARGS.file}' -> {apk_type})")
 
