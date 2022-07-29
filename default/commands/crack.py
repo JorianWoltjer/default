@@ -9,6 +9,7 @@ RAW_HASHES_EXT = [".hash", ".txt", ".hashes", ".hashcat", ".john", ""]
 NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip", "office", "oldoffice"
                     "11600", "13600", "17200", "17210", "17220", "17225", "17230", "23700", "23800", "12500", "13000", 
                     "9400", "9500", "9600", "9700", "9710", "9800", "9810", "9820"]
+FORCE_NEEDS_CONVERTING = False  # Special for when cracking shadow hash with hashcat
 
 
 # Helper functions
@@ -22,19 +23,22 @@ def fix_json_newlines(data):
     """Remove newlines in JSON strings (bug in nth)"""
     return data.replace(b"\n", b"").replace(b"\r", b"")
 
-def strip_john_hash(hashes):
-    if type(hashes) is list:
-        return [strip_john_hash(h) for h in hashes]
+def strip_john_hash(hash):
+    if type(hash) is list:
+        return [strip_john_hash(h) for h in hash]
     
-    if ":" in hashes:
-        return hashes.split(":")[1]
-    return hashes
+    if ":" in hash:
+        hash = hash.split(":")[1]
+        if len(hash) <= 4:  # Sanity check
+            return ""
+
+    return hash
 
 
 def crack_hashcat(ARGS, hash_type):
     """Crack hashes using hashcat"""
     # Convert hashes to hashcat format
-    if hash_type["john"] in NEEDS_CONVERTING or hash_type["hashcat"] in NEEDS_CONVERTING:
+    if hash_type["john"] in NEEDS_CONVERTING or hash_type["hashcat"] in NEEDS_CONVERTING or FORCE_NEEDS_CONVERTING:
         with open(ARGS.file, "r") as f:  # Read
             hashes = f.read().splitlines()
         with open(ARGS.file, "w") as f:  # Write
@@ -49,7 +53,7 @@ def crack_hashcat(ARGS, hash_type):
                 command(["powershell.exe", f"if (test-path {file}) {{ rm {file} }}"])
             else:
                 os.remove(os.path.expanduser("~/.hashcat/hashcat.potfile"))
-            success("Removed hashcat.potfile")
+            success("Removed hashcat.potfile cache")
         except FileNotFoundError:
             pass
     
@@ -88,15 +92,17 @@ def crack_john(ARGS, hash_type):
     if ARGS.no_cache:  # Remove already cracked passwords from cache
         try:
             os.remove(os.path.expanduser(f"{CONFIG.john_path}/run/john.pot"))
-            success("Removed john.pot")
+            success("Removed john.pot cache")
         except FileNotFoundError:
             pass
     
+    john_args = [] if hash_type["john"] == "auto" else [f"--format={hash_type['john']}"]
+    
     progress("Cracking hashes...")
-    command([f'{CONFIG.john_path}/run/john', f"--wordlist={ARGS.wordlist}", f"--format={hash_type['john']}", ARGS.file], highlight=True)
+    command([f'{CONFIG.john_path}/run/john', f"--wordlist={ARGS.wordlist}", *john_args, ARGS.file], highlight=True)
 
     success("Finished cracking hashes. Results:")
-    output = command([f'{CONFIG.john_path}/run/john', '--show', f"--format={hash_type['john']}", ARGS.file], get_output=True)
+    output = command([f'{CONFIG.john_path}/run/john', '--show', *john_args, ARGS.file], get_output=True)
     if ARGS.output:
         with open(ARGS.output, "wb") as f:
             f.write(output)
@@ -146,6 +152,14 @@ def find_hash_type(ARGS, file):
     
     return hash_type
 
+def find_shadow_hashes(file):
+    with open(file) as f:
+        data = f.read()
+        
+    print(data)
+    
+    exit()
+
 
 def crack(ARGS):
     if ARGS.output and os.path.exists(ARGS.output):
@@ -175,6 +189,12 @@ def crack(ARGS):
         progress("Extracting hash from office document...")
         hash = command([f"{CONFIG.john_path}/run/office2john.py", ARGS.file], get_output=True, error_message="Could not extract hash from office document")
         archive_file = ARGS.file
+    elif not ARGS.mode and (ext == ".shadow" or basename == "shadow"):  # Linux shadow hashes
+        if ARGS.john:  # John the Ripper
+            ARGS.mode = "auto"  # John can find the correct hash itself
+        else:  # Hashcat
+            global FORCE_NEEDS_CONVERTING
+            FORCE_NEEDS_CONVERTING = True  # Shadow hash file needs to be converted from john
     elif ext not in RAW_HASHES_EXT:  # Not a raw hash either, so unknown
         error(f"Unknown file type: {ext}. Try making a hash out of it and pass the hash as the argument")
     
