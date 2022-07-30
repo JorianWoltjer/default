@@ -15,8 +15,6 @@ import importlib.util
 import pathlib
 import termios, sys, tty
 
-from pygments import highlight
-
 DIR = os.path.dirname(os.path.realpath(__file__))
 LIBRARY_DIR = os.path.dirname(os.path.realpath(__file__)) + "/lib"
 CONFIG = SimpleNamespace(**json.load(open(f"{DIR}/config.json")))

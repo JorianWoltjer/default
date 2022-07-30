@@ -61,6 +61,17 @@ def main():
                 error_message="Failed to install packages")
         
         success("Installed required packages")
+        
+    if which("ffuf") is None:  # ffuf
+        warning("ffuf is not yet installed")
+        if which("go") is None:
+            warning("go is not yet installed. Install the latest version manually following the instructions on https://go.dev/doc/install. Make sure 'go' is in the PATH and run this setup again")
+        else:
+            progress("Installing ffuf with go...")
+            command(["go", "install", "github.com/ffuf/ffuf@latest"], error_message="Failed to install ffuf using go, check if go is updated or try it manually")
+            success("Installed ffuf")
+    else:
+        success("ffuf is already installed")
     
     print()
     progress("Checking other dependencies")

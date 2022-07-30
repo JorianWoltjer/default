@@ -5,7 +5,7 @@ Some commands or actions are a bit complicated or longwinded, which isn't ideal 
 The idea of this tool is to set a lot of **default** arguments for commands, so you only have to provide a minimal amount of arguments to have it do what you want. I made this tool mostly for Cybersecurity Capture The Flag (CTF) challenges. There is even a `flag` command for searching flags in various encodings. There is often some overlap in challenges where you have to do a common task a lot. It's annoying to have to look up the command every time or type out a whole thing checking everything is correct. This tool can quickly do those common things.  
 As I use Windows Subsystem Linux (WSL) myself, all modules have this in mind and change some things up automatically when in WSL to improve the usability. 
 
-Similar to bash scripts, these actions just execute bash commands under the hood, with nice-looking output. It was made to be easily customizable by just adding new commands to the [`commands/`](default/commands/) directory. I've added 5 useful modules/commands already. 
+Similar to bash scripts, these actions just execute bash commands under the hood, with nice-looking output. It was made to be easily customizable by just adding new commands to the [`commands/`](default/commands/) directory. I've added 6 useful modules/commands already. 
 
 **Modules:**
 
@@ -13,6 +13,7 @@ Similar to bash scripts, these actions just execute bash commands under the hood
 * `default nmap`: Scan a network or IP address quickly for open ports with nmap
 * `default crack`: Crack password-protected files and hashes with hashcat and John the Ripper
 * `default listen`: Create network listeners and forward certain connections to your listener
+* `default ffuf`: Fuzz websites using ffuf to find content, parameters and subdomains
 * `default flag`: Search the current directory for CTF flags in various encodings
 
 ## Usage
@@ -83,9 +84,6 @@ After installing everything a successful output should only contain `[~]` and `[
 
 * [**pwncat**](https://github.com/calebstewart/pwncat) for creating a `pwncat` listener, that automatically upgrades a reverse shell to bash and has loads more nice features like uploading files. Included in [`requirements.txt`](requirements.txt), but could cause some errors because the [listen.py](default/commands/listen.py) expects `python3.9`.
 
-## TODO
+### Ffuf
 
-Features/modules that I am planning to make in the future
-
-- [ ] Add `ffuf` command for web fuzzing (`path`, `parameter`, `vhost`)
-- [ ] Add support for recognizing and cracking linux shadow hashes (`/etc/shadow`)
+* [**ffuf**](https://github.com/ffuf/ffuf) as the main tool to do web fuzzing. Needs to be installed using the go language
