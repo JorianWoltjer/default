@@ -186,7 +186,7 @@ def setup(subparsers):
     
     parser_http = parser_subparsers.add_parser('http', help='Listen for HTTP connections and serve a directory as the content')
     parser_http.set_defaults(func=listen_http)
-    parser_http.add_argument('directory', type=PathType(type='dir'), nargs='?', default=".", help='The directory to serve as content  (default: current)')
+    parser_http.add_argument('directory', type=PathType(type='dir'), nargs='?', default=".", help='The directory to serve as content (default: current)')
     parser_http.add_argument('-p', '--port', type=int, default=8000, help='The port to listen on (default: 8000)')
     
     parser_dns = parser_subparsers.add_parser('dns', help='Listen for DNS requests and respond with an IP, creating a DNS server')

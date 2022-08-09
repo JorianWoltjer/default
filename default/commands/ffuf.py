@@ -48,7 +48,7 @@ def get_domain(url):
     else:
         return urlparse(url).netloc, urlparse(url).scheme
 
-def FUZZ_vhost_keyword_auto(domain):
+def FUZZ_vhost_keyword_recursion(domain):
     words = re.findall(r'\w+', domain)
     fuzz_hosts = [f"FUZZ.{domain}"]  # Include subdomain as well
     for word in words:  # Replace all words with FUZZ
@@ -68,6 +68,8 @@ def content(ARGS):
     if ARGS.recursion:
         ffuf_args += ["-recursion"]
     
+    if ARGS.all:  # Removes default response code filter
+        ffuf_args += ["-mc", "0"]
     if not ARGS.wordlist:
         ARGS.wordlist = f"{LIBRARY_DIR}/list/web-content.txt"
     if ARGS.output:
@@ -87,6 +89,8 @@ def param(ARGS):
     
     ffuf_args = ["-c", "-ac"]  # Color and auto-calibrate filter
     
+    if ARGS.all:  # Removes default response code filter
+        ffuf_args += ["-mc", "0"]
     if not ARGS.wordlist:
         ARGS.wordlist = f"{LIBRARY_DIR}/list/web-param.txt"
     if ARGS.output:
@@ -104,11 +108,13 @@ def vhost(ARGS):
     ffuf_args = ["-c", "-ac"]  # Color and auto-calibrate filter
     ffuf_output_args = []
     
+    if ARGS.all:  # Removes default response code filter
+        ffuf_args += ["-mc", "0"]
     if not ARGS.wordlist:
         ARGS.wordlist = f"{LIBRARY_DIR}/list/web-vhost.txt"
-    
-    if ARGS.auto:
-        fuzz_hosts = FUZZ_vhost_keyword_auto(ARGS.domain)
+
+    if ARGS.recursion:
+        fuzz_hosts = FUZZ_vhost_keyword_recursion(ARGS.domain)
     else:
         fuzz_hosts = [FUZZ_vhost_keyword(ARGS.domain)]
         
@@ -138,6 +144,7 @@ def setup(subparsers):
     parser_content.add_argument('-e', "--no-extensions", action="store_true", help="Don't automatically add extensions to paths in wordlist")
     parser_content.add_argument('-r', "--recursion", action="store_true", help="Recursively search when a directory was found")
     parser_content.add_argument('-o', "--output", help="File to save output of ffuf")
+    parser_content.add_argument('-a', "--all", action="store_true", help="Match all out-of-place responses, removes response code filter")
     
     parser_param = parser_subparsers.add_parser('param', help='Fuzz for query parameters on a page')
     parser_param.set_defaults(func=param)
@@ -145,10 +152,12 @@ def setup(subparsers):
     parser_param.add_argument('-w', "--wordlist", help='Wordlist of parameters to use for fuzzing')
     parser_param.add_argument('-v', "--value", default="1", help='Value of the parameter to use (default: 1)')
     parser_param.add_argument('-o', "--output", help="File to save output of ffuf")
+    parser_param.add_argument('-a', "--all", action="store_true", help="Match all out-of-place responses, removes response code filter")
     
     parser_vhost = parser_subparsers.add_parser('vhost', help='Fuzz for virtual hosts (subdomains) on a website by changing the Host header')
     parser_vhost.set_defaults(func=vhost)
     parser_vhost.add_argument('domain', help='The domain or URL to fuzz the Host header on. May include the keyword "FUZZ" anywhere to specify the location to fuzz at')
     parser_vhost.add_argument('-w', "--wordlist", help='Wordlist of subdomains to use for fuzzing')
-    parser_vhost.add_argument('-a', "--auto", action="store_true", help='Automatically find words in domain to FUZZ')
+    parser_vhost.add_argument('-r', "--recursion", action="store_true", help='Automatically find all words in domain to FUZZ')
     parser_vhost.add_argument('-o', "--output", help="File to save output of ffuf")
+    parser_vhost.add_argument('-a', "--all", action="store_true", help="Match all out-of-place responses, removes response code filter")
