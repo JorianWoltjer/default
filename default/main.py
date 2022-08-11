@@ -75,9 +75,16 @@ def command(command, *, error_message="Failed to execute command", highlight=Fal
     if interact_fg:  # Highlight automatically if interacting in foreground
         highlight = True
     
+    # Echo command
     print(Fore.LIGHTBLACK_EX, end="\r")
     command = [os.path.expanduser(str(c)) for c in command]  # Convert to string and expand '~'
-    print("$", " ".join(shlex.quote(c) for c in command))
+    printed_command = []
+    for arg in command:
+        if len(arg) > 500:  # Shorten with ellipsis
+            printed_command.append(shlex.quote(arg[:50] + "..." + arg[-50:]))
+        else:
+            printed_command.append(shlex.quote(arg))
+    print("$", " ".join(printed_command))
     if highlight:  
         print(Style.RESET_ALL, end="\r")
     
