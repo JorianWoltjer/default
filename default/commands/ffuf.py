@@ -19,14 +19,21 @@ def output_args(filename, n=None):
         return ["-o", filename]  # Default: json
 
 def FUZZ_content_keyword(url):
+    if not (url.startswith("http://") or url.startswith("https://")):
+        url = "http://" + url
+        
     if "FUZZ" in url:  # If already specified
         return url
     elif url[-1] == "/":  # If end is directory
         return url + "FUZZ"
     else:
-        parts = url.split("/")
-        parts[-1] = "FUZZ"  # Replace last page with FUZZ
-        return "/".join(parts)
+        parsed = urlparse(url)
+        parts = parsed.path.split("/")[1:]
+        if len(parts) > 0:
+            parts[-1] = "FUZZ"  # Replace last page with FUZZ
+        else:
+            parts = ["FUZZ"]  # Empty
+        return f"{parsed.scheme}://{parsed.netloc}/{'/'.join(parts)}"
 
 def FUZZ_param_keyword(url):
     if "FUZZ" in url:  # If already specified

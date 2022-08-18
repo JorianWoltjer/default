@@ -1,8 +1,8 @@
 {
     "completed_setup": false,
-    "john_path": "",
-    "hashcat_windows_path": "",
-    "password_list": "",
+    "john_path": null,
+    "hashcat_windows_path": null,
+    "password_list": null,
     "flag_prefixes": [
         "CTF",
         "ctf",
