@@ -6,9 +6,9 @@ import tempfile
 from time import sleep
 
 RAW_HASHES_EXT = [".hash", ".txt", ".hashes", ".hashcat", ".john", ""]
-NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip", "office", "oldoffice"
-                    "11600", "13600", "17200", "17210", "17220", "17225", "17230", "23700", "23800", "12500", "13000", 
-                    "9400", "9500", "9600", "9700", "9710", "9800", "9810", "9820"]
+NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip", "office", "oldoffice", "KeePass", 
+                    11600, 13600, 17200, 17210, 17220, 17225, 17230, 23700, 23800, 12500, 13000, 
+                    9400, 9500, 9600, 9700, 9710, 9800, 9810, 9820, 13400]
 FORCE_NEEDS_CONVERTING = False  # Special for when cracking shadow hash with hashcat
 
 
@@ -58,7 +58,7 @@ def crack_hashcat(ARGS, hash_type):
             pass
     
     if windows_hashcat:
-        info("Detected WSL, using powershell.exe to crack hashes for GPU acceleration")
+        info("Detected WSL, cracking hashes using powershell.exe to use GPU acceleration")
         ARGS.file = wslpath(ARGS.file)
         ARGS.wordlist = wslpath(ARGS.wordlist)
         ARGS.output = wslpath(ARGS.output)
@@ -152,14 +152,6 @@ def find_hash_type(ARGS, file):
     
     return hash_type
 
-def find_shadow_hashes(file):
-    with open(file) as f:
-        data = f.read()
-        
-    print(data)
-    
-    exit()
-
 
 def crack(ARGS):
     if ARGS.output and os.path.exists(ARGS.output):
@@ -188,6 +180,10 @@ def crack(ARGS):
     elif ext in [".docx", ".docm", ".doc", ".xlsx", ".xlsm", ".xls", ".xlm", ".pptx", ".pptm", ".ppt"]:  # Office document
         progress("Extracting hash from office document...")
         hash = command([f"{CONFIG.john_path}/run/office2john.py", ARGS.file], get_output=True, error_message="Could not extract hash from office document")
+        archive_file = ARGS.file
+    elif ext == ".kdbx":
+        progress("Extracting hash from keepass database...")
+        hash = command([f"{CONFIG.john_path}/run/keepass2john", ARGS.file], get_output=True, error_message="Could not extract hash from office document")
         archive_file = ARGS.file
     elif not ARGS.mode and (ext == ".shadow" or basename == "shadow"):  # Linux shadow hashes
         if ARGS.john:  # John the Ripper
@@ -235,7 +231,6 @@ def crack(ARGS):
                     error(f"Could not detect hash type of '{ARGS.file}'. Try manually setting the hash type with --mode")
             
         success(f"Detected hash type: {hash_type['name']}")
-        sleep(1)  # Wait a second to show hash type
     else:  # Force mode
         hash_type = {
             'hashcat': ARGS.mode,
