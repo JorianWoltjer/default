@@ -37,7 +37,7 @@ def nmap(ARGS):
         for ip in results:
             ports += [str(p["port"]) for p in ip["ports"]]
     
-    nmap_args = ['-Pn', '-n', '-sV', '-sC', '-vv']  # Default
+    nmap_args = ['-Pn', '-n', '-sV', '-sC', '-O', '-vv']  # Default
     sudo = True
     
     # https://nmap.org/book/man-output.html
@@ -63,7 +63,7 @@ def nmap(ARGS):
             nmap_args += ['--top-ports', '1000']
     
     # https://nmap.org/book/man-port-scanning-techniques.html
-    if ARGS.connect:
+    if ARGS.connect:  # Doesn't require sudo
         nmap_args += ["-sT"]
         sudo = False
     elif ARGS.udp:

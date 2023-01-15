@@ -31,11 +31,6 @@ def to_grep_hex(s):
     """Convert bytes to regex hex format (b"A" -> '\x41')"""
     return ''.join('\\x' + c for c in chunks(s.hex(), 2))
 
-def get_xor_variations(prefix):
-    
-        
-    return result
-
 
 def flag(ARGS):
     if ARGS.prefix:  # If specified
