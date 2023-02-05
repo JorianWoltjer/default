@@ -1,5 +1,4 @@
 from default.main import *
-from default.lib import wsl_sudo
 import socket
 from pyngrok import ngrok
 from dnslib import DNSRecord, DNSHeader, RR, QTYPE, A, AAAA
@@ -12,7 +11,8 @@ def get_ip():  # Get WSL IP from interface
 def wsl_as_admin(cmd):  # Run command as administrator using wsl-sudo
     progress("Starting administrator prompt...")
     try:
-        wsl_sudo.UnprivilegedClient().main(["powershell.exe", "-Command", cmd], 0)
+        subprocess.check_output(["powershell.exe", "Start-Process", "-Verb", "runas", "-WindowStyle", "hidden", "-Wait", 
+                                    "-FilePath", "powershell", "-ArgumentList", f'"{cmd}"']).decode("utf-8").strip()
     except Exception:
         error("Failed to run as administrator")
 
