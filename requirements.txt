@@ -3,3 +3,4 @@ netifaces
 pyfiglet
 dnslib
 pyngrok
+lz4
