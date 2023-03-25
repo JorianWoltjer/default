@@ -3,10 +3,11 @@ import json
 import os
 from socket import gethostbyname
 
+
 def masscan(ARGS):
     if ARGS.udp:
         error("Masscan does not support UDP scans")
-    
+
     progress(f"Running masscan...")
     masscan_args = ["--wait", "3", "--output-format", "JSON", "--output-file", f"/tmp/masscan.json"]
     masscan_args += ["-p-"] if ARGS.all else ["--top-ports", "1000"]
@@ -20,6 +21,7 @@ def masscan(ARGS):
             print(f"\n{results}\n")
             return results
 
+
 def nmap(ARGS):
     if os.path.exists(ARGS.output):
         choice = ask(f"Nmap output file '{ARGS.output}' already exists, do you want to overwrite it?")
@@ -27,19 +29,19 @@ def nmap(ARGS):
             pass  # Nmap will overwrite itself later
         else:
             exit(1)
-                
+
     if ARGS.masscan:
         results = masscan(ARGS)
         if results is None:
             error("No results from masscan")
-        
+
         ports = []
         for ip in results:
             ports += [str(p["port"]) for p in ip["ports"]]
-    
+
     nmap_args = ['-Pn', '-n', '-sV', '-sC', '-O', '-vv']  # Default
     sudo = True
-    
+
     # https://nmap.org/book/man-output.html
     ext = os.path.splitext(ARGS.output)[1]
     if ext == ".xml":  # XML format
@@ -50,7 +52,7 @@ def nmap(ARGS):
         nmap_args += ['-oA', ARGS.output]
     else:  # Nmap format
         nmap_args += ['-oN', ARGS.output]
-    
+
     # https://nmap.org/book/performance-port-selection.html
     if ARGS.masscan:
         nmap_args += ['-p' + ",".join(ports)]
@@ -61,7 +63,7 @@ def nmap(ARGS):
             nmap_args += ['--top-ports', '100']
         else:
             nmap_args += ['--top-ports', '1000']
-    
+
     # https://nmap.org/book/man-port-scanning-techniques.html
     if ARGS.connect:  # Doesn't require sudo
         nmap_args += ["-sT"]
@@ -70,9 +72,9 @@ def nmap(ARGS):
         nmap_args += ["-sU", "--version-intensity", "0"]
     else:
         nmap_args += ["-sS"]
-    
+
     nmap_args.append('-T3' if ARGS.slow else '-T4')  # https://nmap.org/book/performance-timing-templates.html
-    
+
     progress(f"Running nmap...")
     if sudo:
         command(['sudo', 'nmap', *nmap_args, ARGS.ip], highlight=True)
@@ -84,7 +86,7 @@ def nmap(ARGS):
 def setup(subparsers):
     parser = subparsers.add_parser('nmap', help='Scan a network with nmap')
     parser.set_defaults(func=nmap)
-    
+
     parser.add_argument('ip', help='IP address to scan (can be a range in CIDR notation)')
     parser.add_argument('-o', '--output', help='Output file (default: nmap.txt)', default="nmap.txt")
     parser.add_argument('-a', '--all', help="Scan all ports (0-65535)", action='store_true')

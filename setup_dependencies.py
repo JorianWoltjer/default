@@ -6,6 +6,7 @@ import json
 import glob
 import os
 
+
 def save_config(key, value):
     config = json.load(open(f"{DIR}/config.json"))
     config[key] = value
@@ -13,29 +14,30 @@ def save_config(key, value):
 
 
 def install_nth():
-        progress("Installing name-that-hash from custom fork...")
-        command(["pip", "install", "git+https://github.com/JorianWoltjer/Name-That-Hash.git"], highlight=True)
-        success("Installed name-that-hash")
+    progress("Installing name-that-hash from custom fork...")
+    command(["pip", "install", "git+https://github.com/JorianWoltjer/Name-That-Hash.git"], highlight=True)
+    success("Installed name-that-hash")
+
 
 def is_valid_john(path):
     """Checks if a path is a valid John the Ripper Jumbo clone, and returns the path to the root folder"""
     if path is None:  # If not set
         return False
-    
+
     if os.path.exists(f"{path}/run/zip2john"):
         return path.rstrip("/")  # Remove trailing slashes
-    
+
     for sub in ["run", "src", "doc"]:  # If specified a subdirectory or path
         split = path.split(f"/{sub}")
         if len(split) > 1:
             return split[0]
-    
+
     return False
 
 
 def main():
     apt_dependencies = {
-       # which        apt
+        # which        apt
         "procyon":   "procyon-decompiler",
         "apktool":   "apktool",
         "apksigner": "apksigner",
@@ -54,25 +56,26 @@ def main():
         else:
             warning(f"{tool} is not yet installed")
             not_installed.append(apt_dependencies[tool])
-    
+
     if not_installed:  # If any dependencies missing
         progress("Some packages missing, installing with apt...")
-        command(["sudo", "apt", "install", *not_installed], highlight=True, 
+        command(["sudo", "apt", "install", *not_installed], highlight=True,
                 error_message="Failed to install packages")
-        
+
         success("Installed required packages")
-        
+
     if which("ffuf") is None:  # ffuf
         warning("ffuf is not yet installed")
         if which("go") is None:
             warning("go is not yet installed. Install the latest version manually following the instructions on https://go.dev/doc/install. Make sure 'go' is in the PATH and run this setup again")
         else:
             progress("Installing ffuf with go...")
-            command(["go", "install", "github.com/ffuf/ffuf@latest"], error_message="Failed to install ffuf using go, check if go is updated or try it manually")
+            command(["go", "install", "github.com/ffuf/ffuf@latest"],
+                    error_message="Failed to install ffuf using go, check if go is updated or try it manually")
             success("Installed ffuf")
     else:
         success("ffuf is already installed")
-    
+
     print()
     progress("Checking other dependencies")
     if which("nth") is None:  # Name That Hash
@@ -135,10 +138,9 @@ def main():
             command(["./configure"], cwd=f"{directory}/src")
             command(["make", "-s", "clean"], cwd=f"{directory}/src")
             command(["make", "-sj4"], cwd=f"{directory}/src")
-            
+
             save_config("john_path", directory)
             success("Successfully cloned and configured john")
-
 
     is_wsl = detect_wsl()
     if is_wsl:
@@ -162,7 +164,6 @@ def main():
             warning("This script won't install hashcat on Windows automatically. If you want to use this feature download and extract the latest release on GitHub from https://github.com/hashcat/hashcat/releases")
             warning("Make sure to also add the hashcat folder to your Windows PATH variable, so you can access it via the 'hashcat' command")
 
-
     if CONFIG.password_list is not None and os.path.exists(CONFIG.password_list):
         success("Password list for cracking is already set")
     else:
@@ -174,7 +175,7 @@ def main():
                 break
             else:
                 warning(f"Path '{location}' does not exist")
-        
+
         save_config("password_list", location)
         success(f"Successfully set default wordlist to '{location}'")
 
@@ -183,6 +184,7 @@ def main():
 
     if not CONFIG.completed_setup:
         save_config("completed_setup", True)
+
 
 if __name__ == "__main__":
     try:
