@@ -2,6 +2,7 @@
     "completed_setup": false,
     "john_path": null,
     "hashcat_windows_path": null,
+    "force_hashcat_linux": false,
     "password_list": null,
     "flag_prefixes": [
         "CTF",

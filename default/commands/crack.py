@@ -46,20 +46,20 @@ def crack_hashcat(ARGS, hash_type):
         with open(ARGS.file, "w") as f:  # Write
             f.write("\n".join(strip_john_hash(hashes)))
 
-    windows_hashcat = detect_wsl() and not ARGS.no_wsl and CONFIG.hashcat_windows_path is not None  # Detect WSL
+    should_hashcat_windows = not CONFIG.force_hashcat_linux and CONFIG.hashcat_windows_path is not None and detect_wsl()  # For WSL
 
     if ARGS.no_cache:  # Remove already cracked passwords from cache
         try:
-            if windows_hashcat:
-                file = f"'{CONFIG.hashcat_windows_path}\\hashcat.potfile'"
-                command(["powershell.exe", f"if (test-path {file}) {{ rm {file} }}"])
+            if should_hashcat_windows:
+                file = f"{CONFIG.hashcat_windows_path}\\hashcat.potfile"
+                command(["powershell.exe", f"if (test-path {file!r}) {{ rm {file!r} }}"])
             else:
                 os.remove(os.path.expanduser("~/.hashcat/hashcat.potfile"))
             success("Removed hashcat.potfile cache")
         except FileNotFoundError:
             pass
 
-    if windows_hashcat:
+    if should_hashcat_windows:
         info("Detected WSL, cracking hashes using powershell.exe to use GPU acceleration")
         ARGS.file = wslpath(ARGS.file)
         ARGS.wordlist = wslpath(ARGS.wordlist)
@@ -75,7 +75,7 @@ def crack_hashcat(ARGS, hash_type):
                 highlight=True, error_message=None)
 
     success("Finished cracking hashes. Results:")
-    if windows_hashcat:
+    if should_hashcat_windows:
         output = command(["powershell.exe", "-c", f"cd '{CONFIG.hashcat_windows_path}'; hashcat --show -m {hash_type['hashcat']} '{ARGS.file}'"],
                          get_output=True, error_message="Failed to crack hashes")
     else:
@@ -296,4 +296,3 @@ def setup(subparsers):
     parser.add_argument('-m', '--mode', help='Force hash mode/format for hashcat or john')
     parser.add_argument('-j', '--john', help='Use John the Ripper for cracking instead of hashcat', action='store_true')
     parser.add_argument('-n', '--no-cache', help='Remove any cache files before running (mostly used for testing)', action='store_true')
-    parser.add_argument('-W', '--no-wsl', help='Disable automatic Windows Subsystem Linux detection, force linux hashcat', action='store_true')
