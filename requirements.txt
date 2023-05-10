@@ -4,3 +4,4 @@ pyfiglet
 dnslib
 pyngrok
 lz4
+Faker

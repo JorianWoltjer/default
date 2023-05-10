@@ -79,7 +79,9 @@ def ask_any(question, default):
     return choice
 
 
-def command(command, *, error_message="Failed to execute command", highlight=False, get_output=False, interact_fg=False, **kwargs):
+def command(
+    command, *, error_message="Failed to execute command", allowed_exit_codes=[], highlight=False, get_output=False, interact_fg=False, **kwargs
+):
     if get_output and interact_fg:  # Popen cannot get output
         raise Exception("Cannot get output from a foreground process")
     if interact_fg:  # Highlight automatically if interacting in foreground
@@ -102,8 +104,7 @@ def command(command, *, error_message="Failed to execute command", highlight=Fal
         if interact_fg:
             returncode = run_as_fg_process(command, **kwargs)
         else:
-            p = subprocess.run(command, stdout=subprocess.PIPE if get_output else None, stderr=subprocess.PIPE if get_output else None,
-                               **kwargs)
+            p = subprocess.run(command, stdout=subprocess.PIPE if get_output else None, stderr=subprocess.PIPE if get_output else None, **kwargs)
             returncode = p.returncode
     except FileNotFoundError as e:
         print(e)
@@ -114,7 +115,7 @@ def command(command, *, error_message="Failed to execute command", highlight=Fal
     else:
         print(Style.RESET_ALL, end="")
 
-    if returncode not in [0, -2] and error_message is not None:
+    if returncode not in [0, -2] + allowed_exit_codes and error_message is not None:
         error(error_message)
     if get_output:
         return p.stdout
@@ -132,7 +133,7 @@ def detect_wsl():
 
 
 def strip_ansi(source):
-    return re.sub(r'\033\[(\d|;)+?m', '', source)
+    return re.sub(r"\033\[(\d|;)+?m", "", source)
 
 
 def input_without_newline(length):
@@ -162,9 +163,9 @@ def run_as_fg_process(*args, **kwargs):
             user_preexec_fn()
 
         os.setpgid(os.getpid(), os.getpid())
+
     try:
-        child = subprocess.Popen(*args, preexec_fn=new_pgid,
-                                 **kwargs)
+        child = subprocess.Popen(*args, preexec_fn=new_pgid, **kwargs)
         os.tcsetpgrp(sys.stdin.fileno(), child.pid)
         os.kill(child.pid, signal.SIGCONT)
         ret = child.wait()
@@ -179,31 +180,31 @@ def run_as_fg_process(*args, **kwargs):
 
 
 class PathType(object):  # From: https://stackoverflow.com/a/33181083/10508498
-    def __init__(self, exists=True, type='file', dash_ok=True):
-        '''exists:
-                True: a path that does exist
-                False: a path that does not exist, in a valid parent directory
-                None: don't care
-           type: file, dir, symlink, None, or a function returning True for valid paths
-                None: don't care
-           dash_ok: whether to allow "-" as stdin/stdout'''
+    def __init__(self, exists=True, type="file", dash_ok=True):
+        """exists:
+             True: a path that does exist
+             False: a path that does not exist, in a valid parent directory
+             None: don't care
+        type: file, dir, symlink, None, or a function returning True for valid paths
+             None: don't care
+        dash_ok: whether to allow "-" as stdin/stdout"""
 
         assert exists in (True, False, None)
-        assert type in ('file', 'dir', 'symlink', None) or hasattr(type, '__call__')
+        assert type in ("file", "dir", "symlink", None) or hasattr(type, "__call__")
 
         self._exists = exists
         self._type = type
         self._dash_ok = dash_ok
 
     def __call__(self, string):
-        if string == '-':
+        if string == "-":
             # the special argument "-" means sys.std{in,out}
-            if self._type == 'dir':
-                raise ArgumentTypeError('standard input/output (-) not allowed as directory path')
-            elif self._type == 'symlink':
-                raise ArgumentTypeError('standard input/output (-) not allowed as symlink path')
+            if self._type == "dir":
+                raise ArgumentTypeError("standard input/output (-) not allowed as directory path")
+            elif self._type == "symlink":
+                raise ArgumentTypeError("standard input/output (-) not allowed as symlink path")
             elif not self._dash_ok:
-                raise ArgumentTypeError('standard input/output (-) not allowed')
+                raise ArgumentTypeError("standard input/output (-) not allowed")
         else:
             e = os.path.exists(string)
             if self._exists == True:
@@ -212,13 +213,13 @@ class PathType(object):  # From: https://stackoverflow.com/a/33181083/10508498
 
                 if self._type is None:
                     pass
-                elif self._type == 'file':
+                elif self._type == "file":
                     if not os.path.isfile(string):
                         raise ArgumentTypeError("path is not a file: '%s'" % string)
-                elif self._type == 'symlink':
+                elif self._type == "symlink":
                     if not os.path.symlink(string):
                         raise ArgumentTypeError("path is not a symlink: '%s'" % string)
-                elif self._type == 'dir':
+                elif self._type == "dir":
                     if not os.path.isdir(string):
                         raise ArgumentTypeError("path is not a directory: '%s'" % string)
                 elif not self._type(string):
@@ -227,7 +228,7 @@ class PathType(object):  # From: https://stackoverflow.com/a/33181083/10508498
                 if self._exists == False and e:
                     raise ArgumentTypeError("path exists: '%s'" % string)
 
-                p = os.path.dirname(os.path.normpath(string)) or '.'
+                p = os.path.dirname(os.path.normpath(string)) or "."
                 if not os.path.isdir(p):
                     raise ArgumentTypeError("parent path is not a directory: '%s'" % p)
                 elif not os.path.exists(p):
@@ -237,11 +238,11 @@ class PathType(object):  # From: https://stackoverflow.com/a/33181083/10508498
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run commands with default arguments')
-    subparsers = parser.add_subparsers(dest='command', required=True)
+    parser = argparse.ArgumentParser(description="Run commands with default arguments")
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Load modules
-    for module in (pathlib.Path(os.path.realpath(__file__)).parent / "commands").glob('*.py'):
+    for module in (pathlib.Path(os.path.realpath(__file__)).parent / "commands").glob("*.py"):
         spec = importlib.util.spec_from_file_location(f"{__name__}.imported_{module.stem}", module)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -259,6 +260,7 @@ def main():
             if ask("Do you want to run the setup script now?"):
                 print()
                 import setup_dependencies
+
                 setup_dependencies.main()
                 os.execv(sys.argv[0], sys.argv)  # Run again
 
@@ -268,5 +270,5 @@ def main():
         error("Exiting...")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

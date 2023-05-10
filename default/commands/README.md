@@ -47,7 +47,7 @@ The parsed arguments will then be passed as `ARGS` to your defined function. You
 Continuing the example, an argument for specifying a name could look like this:
 
 ```Python
-from main import *
+from default.main import *
 
 def hello(ARGS):
     print(f"Hello, {ARGS.name}!")

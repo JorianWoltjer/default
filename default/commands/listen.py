@@ -7,14 +7,28 @@ import ipaddress
 
 def get_ip():  # Get WSL IP from interface
     import netifaces
-    return netifaces.ifaddresses('eth0')[netifaces.AF_INET][0]['addr']
+
+    return netifaces.ifaddresses("eth0")[netifaces.AF_INET][0]["addr"]
 
 
 def wsl_as_admin(cmd):  # Run command as administrator using wsl-sudo
     progress("Starting administrator prompt...")
     try:
-        subprocess.check_output(["powershell.exe", "Start-Process", "-Verb", "runas", "-WindowStyle", "hidden", "-Wait",
-                                 "-FilePath", "powershell", "-ArgumentList", f'"{cmd}"']).decode("utf-8").strip()
+        subprocess.check_output(
+            [
+                "powershell.exe",
+                "Start-Process",
+                "-Verb",
+                "runas",
+                "-WindowStyle",
+                "hidden",
+                "-Wait",
+                "-FilePath",
+                "powershell",
+                "-ArgumentList",
+                f'"{cmd}"',
+            ]
+        ).decode("utf-8").strip()
     except Exception:
         error("Failed to run as administrator")
 
@@ -25,16 +39,16 @@ def wsl_as_user(cmd):  # Run command normally
 
 def already_in_portproxy(ip, port):
     list_output = wsl_as_user("netsh interface portproxy show v4tov4")
-    matches = re.findall(r'^\S+\s+(\d+)\s+(\S+)', list_output, re.MULTILINE)
+    matches = re.findall(r"^\S+\s+(\d+)\s+(\S+)", list_output, re.MULTILINE)
     return (str(port), ip) in matches
 
 
 def create_forwarding(ARGS):  # Should be at the start of all listen actions
-    if 'ngrok' in ARGS and ARGS.ngrok:
+    if "ngrok" in ARGS and ARGS.ngrok:
         protocol = "http" if ARGS.action == "http" else "tcp"
 
         progress(f"Creating ngrok tunnel to port {ARGS.port}")
-        if 'udp' in ARGS and ARGS.udp:
+        if "udp" in ARGS and ARGS.udp:
             warning("ngrok does not support UDP, defaulting to TCP")
 
         tunnel = ngrok.connect(ARGS.port, protocol)
@@ -44,7 +58,7 @@ def create_forwarding(ARGS):  # Should be at the start of all listen actions
     is_wsl = detect_wsl()
     if is_wsl:
         ip = get_ip()
-        if ('udp' in ARGS and ARGS.udp) or ARGS.action == "dns":  # If uses UDP, can't use portproxy
+        if ("udp" in ARGS and ARGS.udp) or ARGS.action == "dns":  # If uses UDP, can't use portproxy
             warning("WSL portproxy does not support UDP, traffic can't be forwarded from Windows")
         elif already_in_portproxy(ip, ARGS.port):  # No need to ask
             pass
@@ -56,7 +70,7 @@ def create_forwarding(ARGS):  # Should be at the start of all listen actions
 
 
 def remove_forwarding(ARGS):  # Should be at the end of all listen actions
-    if 'forward' in ARGS and ARGS.forward == "wsl":
+    if "forward" in ARGS and ARGS.forward == "wsl":
         if ask(f"Port {ARGS.port} was forwarded to WSL for listener, do you want to remove the rule now?"):
             wsl_as_admin(f"netsh interface portproxy delete v4tov4 {ARGS.port}")
             success("Successfully removed forwarding rule")
@@ -102,8 +116,11 @@ def listen_nc(ARGS):
         if ARGS.ip != "0.0.0.0":
             warning("Cannot bind to specific IP address with pwncat, defaulting to all interfaces (0.0.0.0)")
 
-        command(["python3.9", "-m", "pwncat", "-lp", ARGS.port], interact_fg=True,
-                error_message="Failed to run pwncat. Make sure it is installed correctly, and if it's installed on a different python version you could change the command in commands/listen.py")
+        command(
+            ["python3.9", "-m", "pwncat", "-lp", ARGS.port],
+            interact_fg=True,
+            error_message="Failed to run pwncat. Make sure it is installed correctly, and if it's installed on a different python version you could change the command in commands/listen.py",
+        )
     else:  # Default to netcat
         nc_args = []
         if ARGS.udp:
@@ -126,8 +143,11 @@ def listen_http(ARGS):
     directory = f"'{ARGS.directory}'" if ARGS.directory != "." else "current directory"
     progress(f"Starting HTTP server on http://{ARGS.ip}:{ARGS.port}/ and serving files in {directory}")
     info("Ctrl+C to exit")
-    command(["python3", "-m", "http.server", str(ARGS.port), "-b", ARGS.ip, "-d", ARGS.directory],
-            interact_fg=True, error_message="Failed to start HTTP server")
+    command(
+        ["python3", "-m", "http.server", str(ARGS.port), "-b", ARGS.ip, "-d", ARGS.directory],
+        interact_fg=True,
+        error_message="Failed to start HTTP server",
+    )
 
     success("Closed HTTP server")
     remove_forwarding(ARGS)
@@ -181,30 +201,73 @@ def listen_dns(ARGS):
         success("Closed DNS listener")
 
 
+def listen_ssh(ARGS):
+    # Forwarding not needed because docker runs on host already
+
+    progress(f"Starting fake SSH server on port {ARGS.port}")
+    info("Ctrl+C to exit")
+    command(
+        ["docker", "run", "-it", "--rm", "-p", f"{ARGS.port}:22", "fffaraz/fakessh"],
+        interact_fg=True,
+        error_message="Failed to start fake SSH server",
+        allowed_exit_codes=[2],
+    )
+
+    success("Closed fake SSH server")
+
+
+def listen_smtp(ARGS):
+    # Forwarding not needed because docker runs on host already
+
+    progress(f"Starting fake SMTP server on port {ARGS.port}")
+    info(f"You can view the emails at http://localhost:{ARGS.web_port}/")
+    command(
+        ["docker", "run", "-it", "--rm", "-p", f"{ARGS.port}:25", "-p", f"{ARGS.web_port}:80", "rnwood/smtp4dev:v3"],
+        interact_fg=True,
+        error_message="Failed to start fake SMTP server",
+    )
+
+    success("Closed fake SMTP server")
+
+
 def setup(subparsers):
-    parser = subparsers.add_parser('listen', help='Create network listeners')
-    parser_subparsers = parser.add_subparsers(dest='action', required=True)
+    parser = subparsers.add_parser("listen", help="Create network listeners")
+    parser_subparsers = parser.add_subparsers(dest="action", required=True)
 
-    parser_nc = parser_subparsers.add_parser('nc', help='Listen for TCP or UDP connections with netcat')
+    parser_nc = parser_subparsers.add_parser("nc", help="Listen for TCP or UDP connections with netcat")
     parser_nc.set_defaults(func=listen_nc)
-    parser_nc.add_argument('port', type=int, help='The port to listen on')
-    parser_nc.add_argument('-p', '--pwncat', action="store_true", help="Use pwncat for reverse shell listening instead of nc")
-    parser_nc.add_argument('-u', '--udp', action="store_true", help='Listen on UDP port instead of TCP')
-    parser_nc.add_argument('-r', '--repeat', action="store_true", help='After closing, start listener again until manually closed')
+    parser_nc.add_argument("port", type=int, help="The port to listen on")
+    parser_nc.add_argument("-p", "--pwncat", action="store_true", help="Use pwncat for reverse shell listening instead of nc")
+    parser_nc.add_argument("-u", "--udp", action="store_true", help="Listen on UDP port instead of TCP")
+    parser_nc.add_argument("-r", "--repeat", action="store_true", help="After closing, start listener again until manually closed")
 
-    parser_http = parser_subparsers.add_parser('http', help='Listen for HTTP connections and serve a directory as the content')
+    parser_http = parser_subparsers.add_parser("http", help="Listen for HTTP connections and serve a directory as the content")
     parser_http.set_defaults(func=listen_http)
-    parser_http.add_argument('directory', type=PathType(type='dir'), nargs='?', default=".",
-                             help='The directory to serve as content (default: current)')
-    parser_http.add_argument('-p', '--port', type=int, default=8000, help='The port to listen on (default: 8000)')
+    parser_http.add_argument(
+        "directory", type=PathType(type="dir"), nargs="?", default=".", help="The directory to serve as content (default: current)"
+    )
+    parser_http.add_argument("-p", "--port", type=int, default=8000, help="The port to listen on (default: 8000)")
 
-    parser_dns = parser_subparsers.add_parser('dns', help='Listen for DNS requests and respond with an IP, creating a DNS server')
+    parser_dns = parser_subparsers.add_parser("dns", help="Listen for DNS requests and respond with an IP, creating a DNS server")
     parser_dns.set_defaults(func=listen_dns)
-    parser_dns.add_argument('-p', '--port', type=int, default=53, help='The port to listen on (default: 53)')
-    parser_dns.add_argument('-r', '--response', default="127.0.0.1", help='The IP address to respond with (default: 127.0.0.1)')
+    parser_dns.add_argument("-p", "--port", type=int, default=53, help="The port to listen on (default: 53)")
+    parser_dns.add_argument("-r", "--response", default="127.0.0.1", help="The IP address to respond with (default: 127.0.0.1)")
+
+    parser_ssh = parser_subparsers.add_parser("ssh", help="Start an SSH server with password attempt logging using docker")
+    parser_ssh.add_argument("port", nargs="?", type=int, default=22, help="The port to listen on (default: 22)")
+    parser_ssh.set_defaults(func=listen_ssh)
+
+    parser_smtp = parser_subparsers.add_parser("smtp", help="Start an SMTP server with webmail to view all messages using docker")
+    parser_smtp.add_argument("port", nargs="?", type=int, default=25, help="The SMTP port to listen on (default: 25)")
+    parser_smtp.add_argument("-w", "--web-port", type=int, default=3000, help="The webmail port to listen on (default: 3000)")
+    parser_smtp.set_defaults(func=listen_smtp)
 
     for p in [parser_nc, parser_http, parser_dns]:  # Add ip argument to all actions
-        p.add_argument('-i', '--ip', default="0.0.0.0",
-                       help='The IP address to listen on. Will only accept connections to interface with this IP address (default: 0.0.0.0)')
+        p.add_argument(
+            "-i",
+            "--ip",
+            default="0.0.0.0",
+            help="The IP address to listen on. Will only accept connections to interface with this IP address (default: 0.0.0.0)",
+        )
     for p in [parser_nc, parser_http]:  # Add ngrok argument to all actions except DNS, because it only uses UDP which ngrok doesn't support
-        p.add_argument('-n', '--ngrok', action="store_true", help="Use ngrok to create a public subdomain that points to the localhost port")
+        p.add_argument("-n", "--ngrok", action="store_true", help="Use ngrok to create a public subdomain that points to the localhost port")
