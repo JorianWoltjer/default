@@ -236,7 +236,7 @@ def setup(subparsers):
 
     parser_nc = parser_subparsers.add_parser("nc", help="Listen for TCP or UDP connections with netcat")
     parser_nc.set_defaults(func=listen_nc)
-    parser_nc.add_argument("port", type=int, help="The port to listen on")
+    parser_nc.add_argument("port", nargs="?", type=int, default=1337, help="The port to listen on")
     parser_nc.add_argument("-p", "--pwncat", action="store_true", help="Use pwncat for reverse shell listening instead of nc")
     parser_nc.add_argument("-u", "--udp", action="store_true", help="Listen on UDP port instead of TCP")
     parser_nc.add_argument("-r", "--repeat", action="store_true", help="After closing, start listener again until manually closed")

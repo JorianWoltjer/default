@@ -71,7 +71,7 @@ def crack_hashcat(ARGS, hash_type):
     else:
         output_args = ["--outfile", ARGS.output] if ARGS.output else []
         progress("Cracking hashes...")
-        command(["hashcat", "--force", "-m", str(hash_type['hashcat']), *output_args, ARGS.file, ARGS.wordlist],
+        command(["hashcat", "-m", str(hash_type['hashcat']), *output_args, ARGS.file, ARGS.wordlist],
                 highlight=True, error_message=None)
 
     success("Finished cracking hashes. Results:")
