@@ -724,7 +724,6 @@ aspx
 asset
 assetmanage
 assetmanagement
-assets
 at
 atom
 attach
@@ -1322,7 +1321,6 @@ crypto
 cs
 cse
 csproj
-css
 csv
 ct
 ctl
@@ -2313,7 +2311,6 @@ java-plugin
 java-sys
 javac
 javadoc
-javascript
 javascripts
 javax
 jboss
@@ -2345,7 +2342,6 @@ jpg
 jquery
 jre
 jrun
-js
 js-lib
 jsFiles
 jscript
@@ -3976,15 +3972,11 @@ student
 students
 studio
 stuff
-style
 style_avatars
 style_captcha
 style_css
 style_emoticons
 style_images
-styles
-stylesheet
-stylesheets
 sub
 sub-login
 subdomains

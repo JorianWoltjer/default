@@ -23,6 +23,9 @@ def masscan(ARGS):
 
 
 def nmap(ARGS):
+    if ARGS.output is None:
+        ARGS.output = "nmap-udp.txt" if ARGS.udp else "nmap.txt"
+    
     if os.path.exists(ARGS.output):
         choice = ask(f"Nmap output file '{ARGS.output}' already exists, do you want to overwrite it?")
         if choice:
@@ -88,7 +91,7 @@ def setup(subparsers):
     parser.set_defaults(func=nmap)
 
     parser.add_argument('ip', help='IP address to scan (can be a range in CIDR notation)')
-    parser.add_argument('-o', '--output', help='Output file (default: nmap.txt)', default="nmap.txt")
+    parser.add_argument('-o', '--output', help='Output file (default: nmap[-udp].txt)')
     parser.add_argument('-a', '--all', help="Scan all ports (0-65535)", action='store_true')
     parser.add_argument('-s', '--slow', help="Slow scan (slower but more thorough)", action='store_true')
     parser.add_argument('-m', '--masscan', help="Use Masscan to find ports, then send to nmap (sudo needed)", action='store_true')
