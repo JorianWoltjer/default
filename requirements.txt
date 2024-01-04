@@ -5,3 +5,4 @@ dnslib
 pyngrok
 lz4
 Faker
+paramiko

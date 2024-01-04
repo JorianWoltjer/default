@@ -3,7 +3,7 @@ import json
 import re
 from colorama import Fore, Style
 import tempfile
-from time import sleep
+import paramiko
 
 RAW_HASHES_EXT = [".hash", ".txt", ".hashes", ".hashcat", ".john", ""]
 NEEDS_CONVERTING = ["7z", "rar", "pkzip", "zip", "office", "oldoffice", "KeePass",
@@ -52,7 +52,8 @@ def crack_hashcat(ARGS, hash_type):
         try:
             if should_hashcat_windows:
                 file = f"{CONFIG.hashcat_windows_path}\\hashcat.potfile"
-                command(["powershell.exe", f"if (test-path {file!r}) {{ rm {file!r} }}"])
+                command(
+                    ["powershell.exe", f"if (test-path {file!r}) {{ rm {file!r} }}"])
             else:
                 os.remove(os.path.expanduser("~/.hashcat/hashcat.potfile"))
             success("Removed hashcat.potfile cache")
@@ -98,13 +99,16 @@ def crack_john(ARGS, hash_type):
         except FileNotFoundError:
             pass
 
-    john_args = [] if hash_type["john"] == "auto" else [f"--format={hash_type['john']}"]
+    john_args = [] if hash_type["john"] == "auto" else [
+        f"--format={hash_type['john']}"]
 
     progress("Cracking hashes...")
-    command([f'{CONFIG.john_path}/run/john', f"--wordlist={ARGS.wordlist}", *john_args, ARGS.file], highlight=True)
+    command([f'{CONFIG.john_path}/run/john', f"--wordlist={ARGS.wordlist}",
+            *john_args, ARGS.file], highlight=True)
 
     success("Finished cracking hashes. Results:")
-    output = command([f'{CONFIG.john_path}/run/john', '--show', *john_args, ARGS.file], get_output=True)
+    output = command([f'{CONFIG.john_path}/run/john',
+                     '--show', *john_args, ARGS.file], get_output=True)
     if ARGS.output:
         with open(ARGS.output, "wb") as f:
             f.write(output)
@@ -114,7 +118,8 @@ def crack_john(ARGS, hash_type):
 
 def find_hash_type(ARGS, file):
     """Detect hash type using Name-That-Hash"""
-    name_that_hash = command(['nth', '-g', '-f', file], get_output=True, error_message="Failed to run Name-That-Hash. Is it installed?")
+    name_that_hash = command(['nth', '-g', '-f', file], get_output=True,
+                             error_message="Failed to run Name-That-Hash. Is it installed?")
     name_that_hash = json.loads(fix_json_newlines(name_that_hash))
 
     # If no results
@@ -124,7 +129,8 @@ def find_hash_type(ARGS, file):
     # Check if all types are the same
     hash_type = list(name_that_hash.values())[0]
     if not all(value == hash_type for value in name_that_hash.values()):
-        error(f"Different hash types detected. Please check '{file}' and try cracking them individually.")
+        error(
+            f"Different hash types detected. Please check '{file}' and try cracking them individually.")
 
     # Filter out hashes that don't have hashcat or john modes
     hash_type = list(filter(lambda d: (not ARGS.john and d['hashcat'] is not None) or (ARGS.john and d['john'] is not None),
@@ -157,49 +163,64 @@ def find_hash_type(ARGS, file):
 
 def crack(ARGS):
     if ARGS.output and os.path.exists(ARGS.output):
-        choice = ask(f"Crack output file '{ARGS.output}' already exists, do you want to overwrite it?")
+        choice = ask(
+            f"Crack output file '{ARGS.output}' already exists, do you want to overwrite it?")
         if choice:
             os.remove(ARGS.output)
         else:
             exit(1)
 
     basename, ext = os.path.splitext(ARGS.file)
+    first_line = open(ARGS.file, "rb").readline()
 
     # Extract hash automatically
-    archive_file = None
+    extracted_file = None
     if ext == ".rar":  # RAR archive
         progress("Extracting hash from RAR archive...")
-        hash = command([f"{CONFIG.john_path}/run/rar2john", ARGS.file], get_output=True, error_message="Could not extract hash from RAR archive")
-        archive_file = ARGS.file
+        hash = command([f"{CONFIG.john_path}/run/rar2john", ARGS.file],
+                       get_output=True, error_message="Could not extract hash from RAR archive")
+        extracted_file = ARGS.file
     elif ext == ".zip":  # ZIP archive
         progress("Extracting hash from ZIP archive...")
-        hash = command([f"{CONFIG.john_path}/run/zip2john", ARGS.file], get_output=True, error_message="Could not extract hash from ZIP archive")
-        archive_file = ARGS.file
+        hash = command([f"{CONFIG.john_path}/run/zip2john", ARGS.file],
+                       get_output=True, error_message="Could not extract hash from ZIP archive")
+        extracted_file = ARGS.file
     elif ext == ".7z":  # 7z archive
         progress("Extracting hash from 7z archive...")
-        hash = command([f"{CONFIG.john_path}/run/7z2john.pl", ARGS.file], get_output=True, error_message="Could not extract hash from 7z archive")
-        archive_file = ARGS.file
+        hash = command([f"{CONFIG.john_path}/run/7z2john.pl", ARGS.file],
+                       get_output=True, error_message="Could not extract hash from 7z archive")
+        extracted_file = ARGS.file
     elif ext in [".docx", ".docm", ".doc", ".xlsx", ".xlsm", ".xls", ".xlm", ".pptx", ".pptm", ".ppt"]:  # Office document
         progress("Extracting hash from office document...")
         hash = command([f"{CONFIG.john_path}/run/office2john.py", ARGS.file], get_output=True,
                        error_message="Could not extract hash from office document")
-        archive_file = ARGS.file
+        extracted_file = ARGS.file
     elif ext == ".kdbx":
         progress("Extracting hash from keepass database...")
         hash = command([f"{CONFIG.john_path}/run/keepass2john", ARGS.file], get_output=True,
                        error_message="Could not extract hash from office document")
-        archive_file = ARGS.file
-    elif not ARGS.mode and (ext == ".shadow" or basename == "shadow"):  # Linux shadow hashes
+        extracted_file = ARGS.file
+    # Linux shadow hashes
+    elif not ARGS.mode and (ext == ".shadow" or basename == "shadow"):
         if ARGS.john:  # John the Ripper
             ARGS.mode = "auto"  # John can find the correct hash itself
         else:  # Hashcat
             global FORCE_NEEDS_CONVERTING
             FORCE_NEEDS_CONVERTING = True  # Shadow hash file needs to be converted from john
     elif ext not in RAW_HASHES_EXT:  # Not a raw hash either, so unknown
-        error(f"Unknown file type: {ext}. Try making a hash out of it and pass the hash as the argument")
+        error(
+            f"Unknown file type: {ext}. Try making a hash out of it and pass the hash as the argument")
+    else:
+        try:
+            paramiko.RSAKey(filename=ARGS.file)  # SSH private key
+        except paramiko.ssh_exception.PasswordRequiredException:
+            progress("Extracting hash from encrypted SSH private key...")
+            hash = command([f"{CONFIG.john_path}/run/ssh2john.py", ARGS.file], get_output=True,
+                           error_message="Could not extract hash from SSH private key")
+            extracted_file = ARGS.file
 
-    if archive_file:  # If extracted in previous part
-        ARGS.file = archive_file + ".hash"
+    if extracted_file:  # If extracted in previous part
+        ARGS.file = extracted_file + ".hash"
         with open(ARGS.file, "wb") as f:
             f.write(hash)
 
@@ -207,7 +228,8 @@ def crack(ARGS):
 
     # Get hashes and types
     with open(ARGS.file) as f:  # File must be a raw hash at this point
-        hashes = [l for l in f.read().splitlines() if l]  # Read non-empty lines
+        # Read non-empty lines
+        hashes = [l for l in f.read().splitlines() if l]
 
     multiple = '' if len(hashes) == 1 else "es"  # Pluralize
     info(f"Found {len(hashes)} hash{multiple} in '{ARGS.file}'")
@@ -229,11 +251,12 @@ def crack(ARGS):
 
             hash_type = find_hash_type(ARGS, tmp.name)
             if hash_type is None:
-                if archive_file:
+                if extracted_file:
                     error(
                         f"Could not detect hash type of '{ARGS.file}', but it should. Make sure you have the **newest** version of Name-That-Hash installed, I only added these hashes very recently.")
                 else:
-                    error(f"Could not detect hash type of '{ARGS.file}'. Try manually setting the hash type with --mode")
+                    error(
+                        f"Could not detect hash type of '{ARGS.file}'. Try manually setting the hash type with --mode")
 
         success(f"Detected hash type: {hash_type['name']}")
     else:  # Force mode
@@ -249,7 +272,8 @@ def crack(ARGS):
         output_parts = output.split(b"\n\n")
         if len(output_parts) > 1:
             print(f"{Fore.RED}{output_parts[0].decode()}{Style.RESET_ALL}")
-        cracked_count = int(re.findall(r"(\d+) password hash(?:es)? cracked, (\d+) left", output_parts[-1].decode())[0][0])
+        cracked_count = int(re.findall(
+            r"(\d+) password hash(?:es)? cracked, (\d+) left", output_parts[-1].decode())[0][0])
         success(f"Cracked {cracked_count}/{len(hashes)} hashes")
     else:  # Hashcat (default)
         output = crack_hashcat(ARGS, hash_type)
@@ -260,28 +284,31 @@ def crack(ARGS):
 
     # Automatically extract archives with found password
     if ext == ".rar" and cracked_count > 0:
-        choice = ask("Found password for RAR archive. Do you want to extract it?")
+        choice = ask(
+            "Found password for RAR archive. Do you want to extract it?")
         if choice:
             progress("Extracting archive with found password...")
             password = output.split(b":")[1].split(b"\n")[0].decode().strip()
             command(["mkdir", "-p", basename])
-            command(["unrar", "x", "../"+archive_file, f"-p{password}", "-o+"], cwd=basename,
+            command(["unrar", "x", "../"+extracted_file, f"-p{password}", "-o+"], cwd=basename,
                     error_message="Failed to extract archive with password, try extracting manually")
             success(f"Extracted RAR archive to {basename}")
     elif ext == ".zip" and cracked_count > 0:
-        choice = ask("Found password for ZIP archive. Do you want to extract it?")
+        choice = ask(
+            "Found password for ZIP archive. Do you want to extract it?")
         if choice:
             progress("Extracting archive with found password...")
             password = output.split(b":")[1].split(b"\n")[0].decode().strip()
-            command(["7z", "x", archive_file, f"-p{password}", f"-o{basename}", "-aoa"],
+            command(["7z", "x", extracted_file, f"-p{password}", f"-o{basename}", "-aoa"],
                     error_message="Failed to extract archive with password, try extracting manually")
             success(f"Extracted ZIP archive to {basename}")
     elif ext == ".7z" and cracked_count > 0:
-        choice = ask("Found password for 7z archive. Do you want to extract it?")
+        choice = ask(
+            "Found password for 7z archive. Do you want to extract it?")
         if choice:
             progress("Extracting archive with found password...")
             password = output.split(b":")[1].split(b"\n")[0].decode().strip()
-            command(["7z", "x", archive_file, f"-p{password}", f"-o{basename}", "-aoa"],
+            command(["7z", "x", extracted_file, f"-p{password}", f"-o{basename}", "-aoa"],
                     error_message="Failed to extract archive with password, try extracting manually")
             success(f"Extracted 7z archive to {basename}")
 
@@ -290,9 +317,14 @@ def setup(subparsers):
     parser = subparsers.add_parser('crack', help='Crack a password hash')
     parser.set_defaults(func=crack)
 
-    parser.add_argument('file', type=PathType(), help='File with the hash to crack (.txt or .hash for raw hashes)')
-    parser.add_argument('-w', '--wordlist', type=PathType(), help='Wordlist to use', default=CONFIG.password_list)
+    parser.add_argument('file', type=PathType(
+    ), help='File with the hash to crack (.txt or .hash for raw hashes)')
+    parser.add_argument('-w', '--wordlist', type=PathType(),
+                        help='Wordlist to use', default=CONFIG.password_list)
     parser.add_argument('-o', '--output', help='Output file')
-    parser.add_argument('-m', '--mode', help='Force hash mode/format for hashcat or john')
-    parser.add_argument('-j', '--john', help='Use John the Ripper for cracking instead of hashcat', action='store_true')
-    parser.add_argument('-n', '--no-cache', help='Remove any cache files before running (mostly used for testing)', action='store_true')
+    parser.add_argument(
+        '-m', '--mode', help='Force hash mode/format for hashcat or john')
+    parser.add_argument(
+        '-j', '--john', help='Use John the Ripper for cracking instead of hashcat', action='store_true')
+    parser.add_argument(
+        '-n', '--no-cache', help='Remove any cache files before running (mostly used for testing)', action='store_true')

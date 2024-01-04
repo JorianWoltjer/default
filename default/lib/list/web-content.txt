@@ -1823,8 +1823,6 @@ foia
 folder
 folder_new
 folders
-font
-fonts
 foo
 food
 football
@@ -3943,7 +3941,6 @@ state
 statement
 statements
 states
-static
 staticpages
 statistic
 statistics
