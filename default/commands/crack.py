@@ -218,6 +218,8 @@ def crack(ARGS):
             hash = command([f"{CONFIG.john_path}/run/ssh2john.py", ARGS.file], get_output=True,
                            error_message="Could not extract hash from SSH private key")
             extracted_file = ARGS.file
+        except Exception:
+            pass
 
     if extracted_file:  # If extracted in previous part
         ARGS.file = extracted_file + ".hash"
