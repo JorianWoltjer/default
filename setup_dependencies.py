@@ -75,6 +75,18 @@ def main():
             success("Installed ffuf")
     else:
         success("ffuf is already installed")
+        
+    if which("x8") is None:  # x8
+        warning("x8 is not yet installed")
+        if which("cargo") is None:
+            warning("cargo is not yet installed. Install the latest version manually following the instructions on https://doc.rust-lang.org/cargo/getting-started/installation.html. Make sure 'cargo' is in the PATH and run this setup again")
+        else:
+            progress("Installing x8 with cargo...")
+            command(["cargo", "install", "x8"],
+                    error_message="Failed to install x8 using cargo, check if cargo is updated or try it manually")
+            success("Installed x8")
+    else:
+        success("x8 is already installed")
 
     print()
     progress("Checking other dependencies")

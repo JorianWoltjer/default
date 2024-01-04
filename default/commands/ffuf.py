@@ -39,15 +39,6 @@ def FUZZ_content_keyword(url):
         return f"{parsed.scheme}://{parsed.netloc}/{'/'.join(parts)}"
 
 
-def FUZZ_param_keyword(url):
-    if "FUZZ" in url:  # If already specified
-        return url
-    elif url[-1] != "?" and "?" in url:  # If already parameters
-        return url + "&FUZZ"
-    else:
-        return url + "?FUZZ"
-
-
 def FUZZ_vhost_keyword(domain):
     """some.domain.example.com -> ['FUZZ.some.domain.example.com', 'FUZZ.domain.example.com', 'some.FUZZ.example.com']"""
     if "FUZZ" in domain:
@@ -122,29 +113,24 @@ def do_content(ARGS):
     success("Finished fuzzing")
     if ARGS.output:
         success(f"Output saved in '{ARGS.output}'")
-        info(f"Tip: Use 'jq -r .results[].url {shlex.quote(ARGS.output)}' to list all found URLs")
+        info(f"Tip: Use `jq -r .results[].url {shlex.quote(ARGS.output)}` to list all found URLs")
 
 
 def do_param(ARGS):
-    ARGS.url = FUZZ_param_keyword(ARGS.url)
-    ARGS.url += f"={ARGS.value}"
     info(f"Fuzzing URL: {ARGS.url}")
+    x8_args = []
 
-    ffuf_args = ["-c", "-ac"]  # Color and auto-calibrate filter
-
-    if ARGS.all:  # Removes default response code filter
-        ffuf_args += ["-mc", "0"]
     if not ARGS.wordlist:
         ARGS.wordlist = f"{LIBRARY_DIR}/list/web-param.txt"
     if ARGS.output:
-        ffuf_args += output_args(ARGS.output)
+        x8_args += ["-o", ARGS.output, "-O", "json"]
 
-    progress("Starting ffuf...")
-    command(["ffuf", "-u", ARGS.url, "-w", ARGS.wordlist, *ffuf_args], highlight=True, error_message="Failed to run ffuf")
+    progress("Starting x8...")
+    command(["x8", "-u", ARGS.url, "-w", ARGS.wordlist, *x8_args], highlight=True, error_message="Failed to run x8")
     success("Finished fuzzing")
     if ARGS.output:
         success(f"Output saved in '{ARGS.output}'")
-        info(f"Tip: Use 'jq -r .results[].url {shlex.quote(ARGS.output)}' to list all found URLs")
+        info(f"Tip: Use `jq -r .[].found_params[].name {shlex.quote(ARGS.output)}` to list all found parameters")
 
 
 def do_vhost(ARGS, ffuf_args=["-ac"], silent=False):
