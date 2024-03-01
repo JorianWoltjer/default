@@ -127,7 +127,7 @@ def listen_nc(ARGS):
             nc_args.append("-u")
 
         while True:  # Repeat infinitely if --repeat
-            returncode = command(["nc", "-lnvp", ARGS.port, "-s", socket.gethostbyname(ARGS.ip), *nc_args], interact_fg=True)
+            returncode = command(["rlwrap", "nc", "-lnvp", ARGS.port, "-s", socket.gethostbyname(ARGS.ip), *nc_args], interact_fg=True)
             if not ARGS.repeat or returncode != 0:
                 break
 

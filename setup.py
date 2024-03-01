@@ -1,17 +1,15 @@
 from setuptools import setup, find_packages
 
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+
 setup(
     name='default',
     version='1.0',
     packages=find_packages(),
     entry_points={
-        'console_scripts': ['default=default.main:main']  # To run from command line
+        # To run from command line
+        'console_scripts': ['default=default.main:main']
     },
-    install_requires=[
-        'colorama',  # Terminal colors
-        'netifaces',  # Network interfaces
-        'pyfiglet',  # ASCII art
-        'dnslib',  # DNS listener
-        'pyngrok',  # ngrok for tunnels
-    ],
+    install_requires=requirements,
 )

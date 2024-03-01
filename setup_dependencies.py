@@ -15,7 +15,8 @@ def save_config(key, value):
 
 def install_nth():
     progress("Installing name-that-hash from custom fork...")
-    command(["pip", "install", "git+https://github.com/JorianWoltjer/Name-That-Hash.git"], highlight=True)
+    command(["pip", "install",
+            "git+https://github.com/JorianWoltjer/Name-That-Hash.git"], highlight=True)
     success("Installed name-that-hash")
 
 
@@ -37,7 +38,7 @@ def is_valid_john(path):
 
 def main():
     apt_dependencies = {
-        # which        apt
+        # which       apt
         "procyon":   "procyon-decompiler",
         "apktool":   "apktool",
         "apksigner": "apksigner",
@@ -46,6 +47,7 @@ def main():
         "masscan":   "masscan",
         "unzip":     "unzip",
         "hashcat":   "hashcat",
+        "rlwrap":    "rlwrap",
     }
 
     progress("Checking installed apt packages...")
@@ -75,7 +77,7 @@ def main():
             success("Installed ffuf")
     else:
         success("ffuf is already installed")
-        
+
     if which("x8") is None:  # x8
         warning("x8 is not yet installed")
         if which("cargo") is None:
@@ -96,13 +98,15 @@ def main():
     else:
         success("name-that-hash is already installed")
         progress("Checking if the custom fork of name-that-hash is installed...")
-        test_hash = "$RAR3$*0*45109af8ab5f297a*adbf6c5385d7a40373e8f77d7b89d317"  # Test if this RAR hash gets recognized (only custom fork does)
+        # Test if this RAR hash gets recognized (only custom fork does)
+        test_hash = "$RAR3$*0*45109af8ab5f297a*adbf6c5385d7a40373e8f77d7b89d317"
         output = command(["nth", "-g", "-t", test_hash], get_output=True)
         output = json.loads(output)
         if output[test_hash]:
             success("Verified custom fork is already installed")
         else:
-            warning("Normal version of name-that-hash installed, but custom fork is required")
+            warning(
+                "Normal version of name-that-hash installed, but custom fork is required")
             progress("Removing normal version...")
             command(["pip", "uninstall", "name-that-hash"], highlight=True)
             success("Successfully removed normal version of name-that-hash")
@@ -113,14 +117,19 @@ def main():
     else:
         warning("dex2jar is not yet installed")
         progress("Installing latest release of dex2jar...")
-        output = command(["curl", "-s", "https://api.github.com/repos/pxb1988/dex2jar/releases/latest"], get_output=True)
+        output = command(
+            ["curl", "-s", "https://api.github.com/repos/pxb1988/dex2jar/releases/latest"], get_output=True)
         output = json.loads(output)
         latest_release = output["assets"][0]["browser_download_url"]
         filename = os.path.basename(urlparse(latest_release).path)
-        command(["wget", "-q", "--show-progress", latest_release, "-O", f"{LIBRARY_DIR}/{filename}"])  # Download
-        command(["unzip", "-q", f"{LIBRARY_DIR}/{filename}", "-d", LIBRARY_DIR])  # Unzip
+        command(["wget", "-q", "--show-progress", latest_release,
+                "-O", f"{LIBRARY_DIR}/{filename}"])  # Download
+        # Unzip
+        command(
+            ["unzip", "-q", f"{LIBRARY_DIR}/{filename}", "-d", LIBRARY_DIR])
         unzipped = glob.glob(f"{LIBRARY_DIR}/dex-tools*")[0]
-        command(["mv", unzipped, f"{LIBRARY_DIR}/dex-tools"])  # Remove version number
+        # Remove version number
+        command(["mv", unzipped, f"{LIBRARY_DIR}/dex-tools"])
         os.remove(f"{LIBRARY_DIR}/{filename}")
         success("Successfully installed dex2jar")
 
@@ -131,10 +140,12 @@ def main():
     if valid_path:  # Test if zip2john is found
         success("john is already installed and configured")
         if valid_path != CONFIG.john_path:
-            warning(f"Config path was not the root path to john, updating to {valid_path}")
+            warning(
+                f"Config path was not the root path to john, updating to {valid_path}")
             save_config("john_path", valid_path)
     else:
-        directory = ask_any("John the Ripper Jumbo is not yet configured. Enter the directory of john or where it should be installed", default="~/john")
+        directory = ask_any(
+            "John the Ripper Jumbo is not yet configured. Enter the directory of john or where it should be installed", default="~/john")
         directory = os.path.expanduser(directory)
         valid_path = is_valid_john(directory)
         if valid_path:  # Test if already cloned
@@ -144,7 +155,8 @@ def main():
             info("john is not yet installed in this directory")
             progress(f"Cloning John the Ripper Jumbo to {directory}...")
             # Clone
-            command(["git", "clone", "https://github.com/openwall/john.git", directory])
+            command(
+                ["git", "clone", "https://github.com/openwall/john.git", directory])
             progress("Building John the Ripper Jumbo...")
             # Build
             command(["./configure"], cwd=f"{directory}/src")
@@ -156,13 +168,17 @@ def main():
 
     is_wsl = detect_wsl()
     if is_wsl:
-        progress("Detected Windows Subsystem Linux (WSL), checking if hashcat is found...")
-        output = command(["powershell.exe", "where.exe hashcat"], get_output=True, error_message=None).strip().decode()
+        progress(
+            "Detected Windows Subsystem Linux (WSL), checking if hashcat is found...")
+        output = command(["powershell.exe", "where.exe hashcat"],
+                         get_output=True, error_message=None).strip().decode()
         if output:
             success(f"Found hashcat at {output}")
-            hashcat_dir = os.path.dirname(output.replace("\\", "/")).replace("/", "\\")
+            hashcat_dir = os.path.dirname(
+                output.replace("\\", "/")).replace("/", "\\")
             if CONFIG.hashcat_windows_path is None:  # If null
-                progress(f"hashcat Windows directory was not configured yet, setting to {hashcat_dir}")
+                progress(
+                    f"hashcat Windows directory was not configured yet, setting to {hashcat_dir}")
                 save_config("hashcat_windows_path", hashcat_dir)
                 success("Updated config with hashcat path")
             elif CONFIG.hashcat_windows_path != hashcat_dir:  # If doesn't match config
@@ -182,7 +198,8 @@ def main():
         warning("Password list is not yet configured")
         location = ""
         while True:  # Repeat until valid path
-            location = ask_any("Enter the default wordlist to be used for cracking passwords", default="/usr/share/wordlists/rockyou.txt")
+            location = ask_any("Enter the default wordlist to be used for cracking passwords",
+                               default="/usr/share/wordlists/rockyou.txt")
             if os.path.exists(location):
                 break
             else:
